@@ -477,6 +477,26 @@ static inline int is_tls_psk_with_aes_128_ccm_8(dtls_cipher_t cipher)
 #endif /* DTLS_PSK */
 }
 
+/** returns true if the cipher matches TLS_MA_ECDSA_WITH_AES_128_CBC_SHA */
+static inline int is_tls_ma_ecdsa_with_aes_128_cbc_sha(dtls_cipher_t cipher)
+{
+#ifdef DTLS_MA
+  return cipher == TLS_MA_ECDSA_WITH_AES_128_CBC_SHA;
+#else
+  return 0;
+#endif /* DTLS_MA */
+}
+
+/** returns true if the cipher matches TLS_MA_ECDSA_WITH_AES_256_CBC_SHA */
+static inline int is_tls_ma_ecdsa_with_aes_256_cbc_sha(dtls_cipher_t cipher)
+{
+#ifdef DTLS_MA
+  return cipher == TLS_MA_ECDSA_WITH_AES_256_CBC_SHA;
+#else
+  return 0;
+#endif /* DTLS_MA */
+}
+
 /** returns true if the application is configured for psk */
 static inline int is_psk_supported(dtls_context_t *ctx)
 {
@@ -496,6 +516,18 @@ static inline int is_ecdsa_supported(dtls_context_t *ctx, int is_client)
 #else
   return 0;
 #endif /* DTLS_ECC */
+}
+
+/** returns true if the application is configured for ma_ecdsa */
+static inline int is_ma_supported(dtls_context_t *ctx, int is_client)
+{
+#ifdef DTLS_MA
+  /* note that MA uses ECDSA */
+  return ctx && ctx->h && ((!is_client && ctx->h->get_ecdsa_key) || 
+			   (is_client && ctx->h->verify_ecdsa_key));
+#else
+  return 0;
+#endif /* DTLS_MA */
 }
 
 /** Returns true if the application is configured for ecdhe_ecdsa with
