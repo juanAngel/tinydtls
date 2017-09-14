@@ -125,5 +125,6 @@ AC_CONFIG_FILES([Makefile
                  platform-specific/Makefile
 		 sha2/Makefile
 		 aes/Makefile
-		 ecc/Makefile])
+		 ecc/Makefile
+     ma/Makefile])
 AC_OUTPUT
