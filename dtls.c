@@ -554,11 +554,16 @@ static int
 known_cipher(dtls_context_t *ctx, dtls_cipher_t code, int is_client) {
   int psk;
   int ecdsa;
+  int ma;
 
   psk = is_psk_supported(ctx);
   ecdsa = is_ecdsa_supported(ctx, is_client);
+  ma = is_ma_supported(ctx, is_client);
   return (psk && is_tls_psk_with_aes_128_ccm_8(code)) ||
-	 (ecdsa && is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(code));
+  (ecdsa && is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(code)) ||
+  (ma && is_tls_ma_ecdsa_with_aes_128_cbc_sha(code)) || // add MA to known cipher list
+  (ma && is_tls_ma_ecdsa_with_aes_256_cbc_sha(code)) // add MA to known cipher list
+  ;
 }
 
 /** Dump out the cipher keys and IVs used for the symetric cipher. */
