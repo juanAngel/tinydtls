@@ -63,6 +63,13 @@ AC_ARG_WITH(ecc,
    OPT_OBJS="${OPT_OBJS} ecc/ecc.o"
    DTLS_ECC=1])
 
+AC_ARG_WITH(ma,
+  [AS_HELP_STRING([--without-ma],[disable support for TLS_MA_ECDSA_WITH_AES_*])],
+  [],
+  [AC_DEFINE(DTLS_MA, 1, [Define to 1 if building with MA support.])
+   OPT_OBJS="${OPT_OBJS} ma/ma.o"
+   DTLS_MA=1])
+
 AC_ARG_WITH(psk,
   [AS_HELP_STRING([--without-psk],[disable support for TLS_PSK_WITH_AES_128_CCM_8])],
   [],
@@ -76,6 +83,7 @@ AC_SUBST(OPT_OBJS)
 AC_SUBST(NDEBUG)
 AC_SUBST(WITH_CONTIKI)
 AC_SUBST(DTLS_ECC)
+AC_SUBST(DTLS_MA)
 AC_SUBST(DTLS_PSK)
 
 if test "${with_contiki}" = "yes" ; then
