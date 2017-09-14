@@ -1259,6 +1259,10 @@ dtls_prepare_record(dtls_peer_t *peer, dtls_security_parameters_t *security,
       dtls_debug("dtls_prepare_record(): encrypt using TLS_PSK_WITH_AES_128_CCM_8\n");
     } else if (is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(security->cipher)) {
       dtls_debug("dtls_prepare_record(): encrypt using TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8\n");
+    } else if (is_tls_ma_ecdsa_with_aes_128_cbc_sha(security->cipher)) {
+      dtls_debug("dtls_prepare_record(): encrypt using TLS_MA_ECDSA_WITH_AES_128_CBC_SHA\n");
+    } else if (is_tls_ma_ecdsa_with_aes_256_cbc_sha(security->cipher)) {
+      dtls_debug("dtls_prepare_record(): encrypt using TLS_MA_ECDSA_WITH_AES_256_CBC_SHA\n");
     } else {
       dtls_debug("dtls_prepare_record(): encrypt using unknown cipher\n");
     }
