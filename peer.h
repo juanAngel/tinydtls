@@ -61,7 +61,7 @@ typedef struct dtls_peer_t {
   dtls_peer_type role;       /**< denotes if this host is DTLS_CLIENT or DTLS_SERVER */
   dtls_state_t state;        /**< DTLS engine state */
 
-  dtls_security_parameters_t *security_params[2];
+  dtls_security_parameters_t *security_params[DTLS_KC_COUNT]; /* based on the number of ciphers */
   dtls_handshake_parameters_t *handshake_params;
 } dtls_peer_t;
 
