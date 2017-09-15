@@ -71,23 +71,27 @@
 #endif /* WITH_CONTIKI */
 
 /** Variable Convensions:
- RH = ? Hello? 
- HS = ? 
- CH = Client Hello? 
- HV = ? 
+ RH = Record Header 
+ HS = Handshake
+ CH = Client Hello 
+ HV = Hello Verify 
  SH = Server Hello? 
  CE = Client Key? 
  SKEX = Server Key Exchange? 
  CKEX = Client Key Exchange? 
- CV = ? 
+ CV = Client Verify?
  FIN = ?
  HDR = Header?
 */
+#define DTLS_COOKIE_LENGTH_MAX 32
+#define DTLS_COMPRESSION_METHOD_LENGTH 2
+#define DTLS_ECDSA_EXTENSION_LENGTH 34 + 2 /* include extension size indicator bytes */
+#define DTLS_KC_LENGTH_MAX DTLS_KC_COUNT * 2 + 2 /* known ciphers plus cipher size indicator */
+
 #define DTLS_RH_LENGTH sizeof(dtls_record_header_t)
 #define DTLS_HS_LENGTH sizeof(dtls_handshake_header_t)
-#define DTLS_CH_LENGTH sizeof(dtls_client_hello_t) /* no variable length fields! */
-#define DTLS_COOKIE_LENGTH_MAX 32
-#define DTLS_CH_LENGTH_MAX sizeof(dtls_client_hello_t) + DTLS_COOKIE_LENGTH_MAX + 12 + 34 /* what are 12 and 34 for? */
+#define DTLS_CH_LENGTH sizeof(dtls_client_hello_t) /* no variable length fields!  version, gmt rand, rand */ 
+#define DTLS_CH_LENGTH_MAX DTLS_CH_LENGTH + DTLS_COOKIE_LENGTH_MAX + DTLS_KC_LENGTH_MAX + DTLS_COMPRESSION_METHOD_LENGTH + DTLS_ECDSA_EXTENSION_LENGTH + 4 /* spaces between headers */ 
 #define DTLS_HV_LENGTH sizeof(dtls_hello_verify_t)
 #define DTLS_SH_LENGTH (2 + DTLS_RANDOM_LENGTH + 1 + 2 + 1)
 #define DTLS_CE_LENGTH (3 + 3 + 27 + DTLS_EC_KEY_SIZE + DTLS_EC_KEY_SIZE)
@@ -99,8 +103,8 @@
 #define DTLS_CV_LENGTH (1 + 1 + 2 + 1 + 1 + 1 + 1 + DTLS_EC_KEY_SIZE + 1 + 1 + DTLS_EC_KEY_SIZE)
 #define DTLS_FIN_LENGTH 12
 
-#define HS_HDR_LENGTH  DTLS_RH_LENGTH + DTLS_HS_LENGTH
-#define HV_HDR_LENGTH  HS_HDR_LENGTH + DTLS_HV_LENGTH
+#define HS_HDR_LENGTH  DTLS_RH_LENGTH + DTLS_HS_LENGTH /* handshake header = dtls record header + dtls handshake header */
+#define HV_HDR_LENGTH  HS_HDR_LENGTH + DTLS_HV_LENGTH  /* header verify    = handshake header   + dtls handshake verify */
 
 #define HIGH(V) (((V) >> 8) & 0xff)
 #define LOW(V)  ((V) & 0xff)
@@ -526,16 +530,18 @@ static inline int is_ecdsa_supported(dtls_context_t *ctx, int is_client)
 #ifdef DTLS_ECC
   return ctx && ctx->h && ((!is_client && ctx->h->get_ecdsa_key) || 
 			   (is_client && ctx->h->verify_ecdsa_key));
+#elif DTLS_MA /* note that MA uses ECDSA */
+  return ctx && ctx->h && ((!is_client && ctx->h->get_ecdsa_key) || 
+       (is_client && ctx->h->verify_ecdsa_key));
 #else
   return 0;
-#endif /* DTLS_ECC */
+#endif 
 }
 
 /** returns true if the application is configured for ma_ecdsa */
 static inline int is_ma_supported(dtls_context_t *ctx, int is_client)
 {
 #ifdef DTLS_MA
-  /* note that MA uses ECDSA */
   return ctx && ctx->h && ((!is_client && ctx->h->get_ecdsa_key) || 
 			   (is_client && ctx->h->verify_ecdsa_key));
 #else
@@ -548,6 +554,8 @@ static inline int is_ma_supported(dtls_context_t *ctx, int is_client)
 static inline int is_ecdsa_client_auth_supported(dtls_context_t *ctx)
 {
 #ifdef DTLS_ECC
+  return ctx && ctx->h && ctx->h->get_ecdsa_key && ctx->h->verify_ecdsa_key;
+#elif DTLS_MA /* note that MA uses ECDSA */
   return ctx && ctx->h && ctx->h->get_ecdsa_key && ctx->h->verify_ecdsa_key;
 #else
   return 0;
@@ -1795,13 +1803,18 @@ dtls_send_server_hello(dtls_context_t *ctx, dtls_peer_t *peer)
   uint8 buf[DTLS_SH_LENGTH + 2 + 5 + 5 + 8 + 6];
   uint8 *p;
   int ecdsa;
+  int ma_128;
+  int ma_256;
+
   uint8 extension_size;
   dtls_handshake_parameters_t *handshake = peer->handshake_params;
   dtls_tick_t now;
 
-  ecdsa = is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(handshake->cipher);
-
-  extension_size = (ecdsa) ? 2 + 5 + 5 + 6 : 0;
+  ecdsa = is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(handshake->cipher); /* check if ecdsa */
+  ma_128 = is_tls_ma_ecdsa_with_aes_128_cbc_sha(handshake->cipher); /* check if MA 128 */
+  ma_256 = is_tls_ma_ecdsa_with_aes_256_cbc_sha(handshake->cipher); /* check if MA 256 */
+  
+  extension_size = (ecdsa || ma_128 || ma_256) ? 2 + 5 + 5 + 6 : 0; /* MA uses ecdsa */
 
   /* Handshake header */
   p = buf;
@@ -2279,7 +2292,33 @@ dtls_send_client_key_exchange(dtls_context_t *ctx, dtls_peer_t *peer)
     break;
   }
 #endif /* DTLS_ECC */
-  default:
+#ifdef DTLS_MA
+  /* TODO: Fix the key size */
+  case TLS_MA_ECDSA_WITH_AES_128_CBC_SHA: 
+  case TLS_MA_ECDSA_WITH_AES_256_CBC_SHA: {
+    uint8 *ephemeral_pub_x;
+    uint8 *ephemeral_pub_y;
+
+    dtls_int_to_uint8(p, 1 + 2 * DTLS_MA_KEY_SIZE);
+    p += sizeof(uint8);
+
+    /* This should be an uncompressed point, but I do not have access to the spec. */
+    dtls_int_to_uint8(p, 4);
+    p += sizeof(uint8);
+
+    ephemeral_pub_x = p;
+    p += DTLS_MA_KEY_SIZE;
+    ephemeral_pub_y = p;
+    p += DTLS_MA_KEY_SIZE;
+
+    dtls_ecdsa_generate_key(peer->handshake_params->keyx.ecdsa.own_eph_priv,
+              ephemeral_pub_x, ephemeral_pub_y,
+              DTLS_MA_KEY_SIZE);
+
+    break;
+  }
+#endif /* DTLS_MA */
+default:
     dtls_crit("cipher not supported\n");
     return dtls_alert_fatal_create(DTLS_ALERT_INTERNAL_ERROR);
   }
@@ -2376,7 +2415,7 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
   ecdsa = is_ecdsa_supported(ctx, 1);
   ma = is_ma_supported(ctx, 1);
 
-  cipher_size = 2 /* DTLS version? */ + ((ecdsa) ? 2 : 0) + ((psk) ? 2 : 0) /* + ((ma) ? 4 : 0) */; // 2 + 2 + 2 = 6 + 4 = 10 for MA_128, and 2 for MA_256
+  cipher_size = 2 /* DTLS version? */ + ((ecdsa) ? 2 : 0) + ((psk) ? 2 : 0)  + ((ma) ? 4 : 0) ; // 2 + 2 + 2 = 6 + 4 = 10 for MA_128, and 2 for MA_256
   extension_size = (ecdsa || ma) ? 2 + 6 + 6 + 8 + 6 + 8: 0; // = 36 or 0
 
   // cipher size is always 2 + x, the code below will never be executed! so changing it from 0 to 2 for meaningful code
@@ -2417,9 +2456,15 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
   }
 
   /* add known cipher(s) */
-  dtls_int_to_uint16(p, cipher_size - 2);
-  p += sizeof(uint16);
+  dtls_int_to_uint16(p, cipher_size - 2); /* -2 is to remove no cipher callback */
+  p += sizeof(uint16); /* skip 2 bytes for NULL cipher */
 
+  if (ma) {
+    dtls_int_to_uint16(p, TLS_MA_ECDSA_WITH_AES_128_CBC_SHA);
+    p += sizeof(uint16);
+    dtls_int_to_uint16(p, TLS_MA_ECDSA_WITH_AES_256_CBC_SHA);
+    p += sizeof(uint16);
+  }
   if (ecdsa) {
     dtls_int_to_uint16(p, TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8);
     p += sizeof(uint16);
@@ -3099,7 +3144,7 @@ handle_handshake_msg(dtls_context_t *ctx, dtls_peer_t *peer, session_t *session,
       return dtls_alert_fatal_create(DTLS_ALERT_UNEXPECTED_MESSAGE);
     }
 
-    err = check_server_hello_verify_request(ctx, peer, data, data_length);
+    err = check_server_hello_verify_request(ctx, peer, data, data_length); 
     if (err < 0) {
       dtls_warn("error in check_server_hello_verify_request err: %i\n", err);
       return err;
@@ -3288,7 +3333,7 @@ handle_handshake_msg(dtls_context_t *ctx, dtls_peer_t *peer, session_t *session,
     break;
 #endif /* DTLS_ECC */
 
-  case DTLS_HT_CLIENT_HELLO:
+  case DTLS_HT_CLIENT_HELLO: /* handle CLIENT HELLO */
 
     if ((peer && state != DTLS_STATE_CONNECTED) ||
 	(!peer && state != DTLS_STATE_WAIT_CLIENTHELLO)) {
@@ -3314,6 +3359,8 @@ handle_handshake_msg(dtls_context_t *ctx, dtls_peer_t *peer, session_t *session,
       dtls_debug("server hello verify was sent\n");
       break;
     }
+
+    /* MATCHING COOKIE IS FOUND */
 
     /* At this point, we have a good relationship with this peer. This
      * state is left for re-negotiation of key material. */
@@ -3357,6 +3404,8 @@ handle_handshake_msg(dtls_context_t *ctx, dtls_peer_t *peer, session_t *session,
      * message containing a ClientHello. dtls_get_cipher() therefore
      * does not check again.
      */
+    
+     /* CHECK HERE */
     err = dtls_update_parameters(ctx, peer, data, data_length);
     if (err < 0) {
       dtls_warn("error updating security parameters\n");

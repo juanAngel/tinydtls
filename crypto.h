@@ -307,6 +307,7 @@ int dtls_psk_pre_master_secret(unsigned char *key, size_t keylen,
 			       unsigned char *result, size_t result_len);
 
 #define DTLS_EC_KEY_SIZE 32
+#define DTLS_MA_KEY_SIZE 32 /* TODO: Confirm and FIX THIS */
 
 int dtls_ecdh_pre_master_secret(unsigned char *priv_key,
 				unsigned char *pub_key_x,
