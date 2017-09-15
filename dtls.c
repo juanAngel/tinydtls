@@ -1849,7 +1849,7 @@ dtls_send_server_hello(dtls_context_t *ctx, dtls_peer_t *peer)
     p += sizeof(uint16);
   }
 
-  if (ecdsa) {
+  if (ecdsa || ma_128 || ma_256) {
     /* client certificate type extension */
     dtls_int_to_uint16(p, TLS_EXT_CLIENT_CERTIFICATE_TYPE);
     p += sizeof(uint16);
@@ -2182,6 +2182,44 @@ dtls_send_server_hello_msgs(dtls_context_t *ctx, dtls_peer_t *peer)
       }
     }
   }
+#endif /* DTLS_ECC */
+
+#ifdef DTLS_MA
+if (is_tls_ma_ecdsa_with_aes_128_cbc_sha(peer->handshake_params->cipher) || is_tls_ma_ecdsa_with_aes_256_cbc_sha(peer->handshake_params->cipher)) {
+  /* MA uses ecdsa */
+  const dtls_ecdsa_key_t *ecdsa_key;
+
+  res = CALL(ctx, get_ecdsa_key, &peer->session, &ecdsa_key);
+  if (res < 0) {
+    dtls_crit("no ecdsa certificate to send in certificate\n");
+    return res;
+  }
+
+  res = dtls_send_certificate_ecdsa(ctx, peer, ecdsa_key);
+
+  if (res < 0) {
+    dtls_debug("dtls_server_hello: cannot prepare Certificate record\n");
+    return res;
+  }
+
+  res = dtls_send_server_key_exchange_ecdh(ctx, peer, ecdsa_key);
+
+  if (res < 0) {
+    dtls_debug("dtls_server_hello: cannot prepare Server Key Exchange record\n");
+    return res;
+  }
+
+  if ((is_tls_ma_ecdsa_with_aes_128_cbc_sha(peer->handshake_params->cipher) || 
+        is_tls_ma_ecdsa_with_aes_256_cbc_sha(peer->handshake_params->cipher) ) &&
+        is_ecdsa_client_auth_supported(ctx)) {
+    res = dtls_send_server_certificate_request(ctx, peer);
+
+    if (res < 0) {
+      dtls_debug("dtls_server_hello: cannot prepare certificate Request record\n");
+      return res;
+    }
+  }
+}
 #endif /* DTLS_ECC */
 
 #ifdef DTLS_PSK
