@@ -70,11 +70,24 @@
   HASH_DELETE(hh,head,delptr)
 #endif /* WITH_CONTIKI */
 
+/** Variable Convensions:
+ RH = ? Hello? 
+ HS = ? 
+ CH = Client Hello? 
+ HV = ? 
+ SH = Server Hello? 
+ CE = Client Key? 
+ SKEX = Server Key Exchange? 
+ CKEX = Client Key Exchange? 
+ CV = ? 
+ FIN = ?
+ HDR = Header?
+*/
 #define DTLS_RH_LENGTH sizeof(dtls_record_header_t)
 #define DTLS_HS_LENGTH sizeof(dtls_handshake_header_t)
 #define DTLS_CH_LENGTH sizeof(dtls_client_hello_t) /* no variable length fields! */
 #define DTLS_COOKIE_LENGTH_MAX 32
-#define DTLS_CH_LENGTH_MAX sizeof(dtls_client_hello_t) + DTLS_COOKIE_LENGTH_MAX + 12 + 34
+#define DTLS_CH_LENGTH_MAX sizeof(dtls_client_hello_t) + DTLS_COOKIE_LENGTH_MAX + 12 + 34 /* what are 12 and 34 for? */
 #define DTLS_HV_LENGTH sizeof(dtls_hello_verify_t)
 #define DTLS_SH_LENGTH (2 + DTLS_RANDOM_LENGTH + 1 + 2 + 1)
 #define DTLS_CE_LENGTH (3 + 3 + 27 + DTLS_EC_KEY_SIZE + DTLS_EC_KEY_SIZE)
@@ -2354,16 +2367,20 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
   uint8_t extension_size;
   int psk;
   int ecdsa;
+  int ma;
+
   dtls_handshake_parameters_t *handshake = peer->handshake_params;
   dtls_tick_t now;
 
   psk = is_psk_supported(ctx);
   ecdsa = is_ecdsa_supported(ctx, 1);
+  ma = is_ma_supported(ctx, 1);
 
-  cipher_size = 2 + ((ecdsa) ? 2 : 0) + ((psk) ? 2 : 0);
-  extension_size = (ecdsa) ? 2 + 6 + 6 + 8 + 6 + 8: 0;
+  cipher_size = 2 /* DTLS version? */ + ((ecdsa) ? 2 : 0) + ((psk) ? 2 : 0) /* + ((ma) ? 4 : 0) */; // 2 + 2 + 2 = 6 + 4 = 10 for MA_128, and 2 for MA_256
+  extension_size = (ecdsa || ma) ? 2 + 6 + 6 + 8 + 6 + 8: 0; // = 36 or 0
 
-  if (cipher_size == 0) {
+  // cipher size is always 2 + x, the code below will never be executed! so changing it from 0 to 2 for meaningful code
+  if (cipher_size == 2) {
     dtls_crit("no cipher callbacks implemented\n");
   }
 
@@ -2425,7 +2442,7 @@ dtls_send_client_hello(dtls_context_t *ctx, dtls_peer_t *peer,
     p += sizeof(uint16);
   }
 
-  if (ecdsa) {
+  if (ecdsa || ma) {
     /* client certificate type extension */
     dtls_int_to_uint16(p, TLS_EXT_CLIENT_CERTIFICATE_TYPE);
     p += sizeof(uint16);
@@ -3353,8 +3370,10 @@ handle_handshake_msg(dtls_context_t *ctx, dtls_peer_t *peer, session_t *session,
     if (err < 0) {
       return err;
     }
-    if (is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(peer->handshake_params->cipher) &&
-	is_ecdsa_client_auth_supported(ctx))
+    if ((is_tls_ecdhe_ecdsa_with_aes_128_ccm_8(peer->handshake_params->cipher) ||
+    is_tls_ma_ecdsa_with_aes_128_cbc_sha(peer->handshake_params->cipher) ||
+    is_tls_ma_ecdsa_with_aes_256_cbc_sha(peer->handshake_params->cipher)
+   ) && is_ecdsa_client_auth_supported(ctx))
       peer->state = DTLS_STATE_WAIT_CLIENTCERTIFICATE;
     else
       peer->state = DTLS_STATE_WAIT_CLIENTKEYEXCHANGE;
