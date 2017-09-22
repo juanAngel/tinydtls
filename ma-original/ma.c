@@ -1,5 +1,4 @@
 
-#include "crypt.h"
 #include <stdio.h> 
 #include <stdlib.h>
 #include <math.h>
@@ -7,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include "ma.h"
 
 static int dtls_ma_seed = 0;
 static FILE *dtls_ma_urandom_fp = NULL;
