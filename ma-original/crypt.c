@@ -12,7 +12,7 @@ static int dtls_ma_seed = 0;
 static FILE *dtls_ma_urandom_fp = NULL;
 #define DTLS_MA_DEBUG 1
 
-void dtls_ma_generate_keys(struct PrivKey* privk, struct PubKey* pubk){
+void dtls_ma_generate_keys(struct dtls_ma_private_key* privk, struct dtls_ma_public_key* pubk){
 	dtls_ma_debug("generate private key");
 	dtls_ma_generate_private_key(privk);
 	dtls_ma_debug("generate public key");
@@ -20,7 +20,7 @@ void dtls_ma_generate_keys(struct PrivKey* privk, struct PubKey* pubk){
 	dtls_ma_debug("All done");
 }
 
-void dtls_ma_generate_private_key(struct PrivKey* privk){
+void dtls_ma_generate_private_key(struct dtls_ma_private_key* privk){
 	int i;
 	unsigned char* skStep;
 	unsigned char* pStep;
@@ -35,24 +35,24 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
         mpz_init (privk->r);	
         mpz_init (privk->t);	
 	
-	for(i=0; i < N; i++)
+	for(i=0; i < DTLS_MA_N; i++)
 		mpz_init (privk->k[i]);
 
         mpz_init (privk->sk);
         mpz_init (privk->skInvQ);	
         mpz_init (privk->skInvP);	
 
-        mpz_set_ui(privk->n,N); 
-        mpz_set_ui(privk->m,M); 
-        mpz_set_ui(privk->w,W); 
-	mpz_set_ui(privk->wMin,W_MIN); 
+        mpz_set_ui(privk->n,DTLS_MA_N); 
+        mpz_set_ui(privk->m,DTLS_MA_M); 
+        mpz_set_ui(privk->w,DTLS_MA_W); 
+	mpz_set_ui(privk->wMin,DTLS_MA_W_MIN); 
 
         mpz_set_ui(privk->q,1); 
-	mpz_mul_2exp(privk->q, privk->q, Q_BITS); 	
+	mpz_mul_2exp(privk->q, privk->q, DTLS_MA_Q_BITS); 	
 
 
 	mpz_set_ui(privk->t,1); 
-	mpz_mul_2exp(privk->t, privk->t, T_BITS); 	
+	mpz_mul_2exp(privk->t, privk->t, DTLS_MA_T_BITS); 	
 
 
         mpz_t a, b, c, d;
@@ -64,23 +64,23 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 	//error
 
 	mpz_set_ui(privk->r,1); 
-	mpz_mul_2exp(privk->r, privk->r, E_BITS); 	
+	mpz_mul_2exp(privk->r, privk->r, DTLS_MA_E_BITS); 	
 
         //sk
-	skStep = dtls_ma_random_hex(SK_BITS/8);
+	skStep = dtls_ma_random_hex(DTLS_MA_SK_BITS/8);
         mpz_set_str(privk->sk, (char *) skStep, 16);
 	free(skStep);
         mpz_mul_ui (privk->sk, privk->sk, 2);
         mpz_add_ui (privk->sk, privk->sk, 1); //privk->sk co-primise with q
 
        
-	//  pStep = (privk->q - (privk->t-1lu)*privk->sk)/(W*privk->r) - privk->t; //$sk*(t-1)+w*r*(t+pStep)<q$
+	//  pStep = (privk->q - (privk->t-1lu)*privk->sk)/(DTLS_MA_W*privk->r) - privk->t; //$sk*(t-1)+w*r*(t+pStep)<q$
 	// do validity check
         mpz_sub_ui (a, privk->t, 1);
         mpz_mul (b, a, privk->sk);
 	
 	if(mpz_cmp(b, privk->q)>=0){
-		dtls_ma_debug("\nError: the parameters T_BITS or SK_BITS too big with respect to Q_BITS");
+		dtls_ma_debug("\nError: the parameters DTLS_MA_T_BITS or DTLS_MA_SK_BITS too big with respect to DTLS_MA_Q_BITS");
 		return;
 	}
 
@@ -88,14 +88,14 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 
         mpz_sub (a, privk->q, b); //a = privk->q - (privk->t-1lu)*privk->sk
 
-        mpz_mul_ui (b, privk->r, W);
+        mpz_mul_ui (b, privk->r, DTLS_MA_W);
 
 
         mpz_fdiv_q (a, a, b); //a will be the maximum of random numbers that can be added to t to get privk->p
 	mpz_add_ui(b, privk->t, 0xFF);
 
 	if(mpz_cmp(a,b)<0){
-		dtls_ma_debug("\nError: the parameters E_BITS and SK_BITS too big with respect to Q_BITS");
+		dtls_ma_debug("\nError: the parameters DTLS_MA_E_BITS and DTLS_MA_SK_BITS too big with respect to DTLS_MA_Q_BITS");
 		return;
 	}	
 
@@ -106,7 +106,7 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 
 
 	//privk->p = privk->t + pStep*2+1; //since 4294967296 has only the factor 2 
-	pStep = dtls_ma_random_hex(SK_BITS/8);	
+	pStep = dtls_ma_random_hex(DTLS_MA_SK_BITS/8);	
         mpz_set_str(b, (char *) pStep, 16);
 	free(pStep);
 	mpz_mod(b, b, a);	
@@ -142,7 +142,7 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
                         break; 
 	        }
 		else{
-			pStep = dtls_ma_random_hex(SK_BITS/8);	
+			pStep = dtls_ma_random_hex(DTLS_MA_SK_BITS/8);	
         		mpz_set_str(b, (char *) pStep, 16);
 			free(pStep);
 			mpz_mod(b , b, a);	
@@ -167,8 +167,8 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 
 
 
-	for(i=0; i < N; i++){
-		k = dtls_ma_random_hex(Q_BITS/8);	
+	for(i=0; i < DTLS_MA_N; i++){
+		k = dtls_ma_random_hex(DTLS_MA_Q_BITS/8);	
 		mpz_set_str(privk->k[i], (char *) k, 16);
 		free(k);
 	}
@@ -179,9 +179,9 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 	
         
 	/*
-        short mm = B; //204*80 = 16320 < 2^14 = 16384   
+        short mm = DTLS_MA_B; //204*80 = 16320 < 2^14 = 16384   
         	
-	for(i=0; i< COMMON_LEN; i++){   	
+	for(i=0; i< DTLS_MA_COMMON_LEN; i++){   	
 		short sign = rand()%2;                
 		short temp = rand()%mm;
 		if(temp<2){
@@ -199,7 +199,7 @@ void dtls_ma_generate_private_key(struct PrivKey* privk){
 	return;
 }
 
-void dtls_ma_print_private_key(struct PrivKey* privk){
+void dtls_ma_print_private_key(struct dtls_ma_private_key* privk){
  
   printf("n = %lu \n", mpz_get_ui(privk->n));	  	
   printf("m = %lu \n", mpz_get_ui(privk->m));
@@ -224,7 +224,7 @@ void dtls_ma_print_private_key(struct PrivKey* privk){
   
 }
 
-void dtls_ma_save_private_key(const char* fname, struct PrivKey* privk){
+void dtls_ma_save_private_key(const char* fname, struct dtls_ma_private_key* privk){
 	FILE *fp;
 
    	fp = fopen(fname, "w");
@@ -239,7 +239,7 @@ void dtls_ma_save_private_key(const char* fname, struct PrivKey* privk){
 	fprintf(fp, "wMin = %s\n", mpz_get_str(NULL, 16, privk->wMin));  
         fprintf(fp, "skInvP = %s\n", mpz_get_str(NULL, 16, privk->skInvP)); 
 	int i;
-  	for(i=0; i< N; i++){
+  	for(i=0; i< DTLS_MA_N; i++){
         	fprintf(fp, "%s\n", mpz_get_str(NULL, 16, privk->k[i]));
   	} 
 
@@ -252,7 +252,7 @@ void dtls_ma_save_private_key(const char* fname, struct PrivKey* privk){
 
 
 
-int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk){
+int dtls_ma_load_private_key(const char* fname, struct dtls_ma_private_key* privk){
 	int i;
 	mpz_init (privk->n);
 	mpz_init (privk->w);
@@ -263,7 +263,7 @@ int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk){
         mpz_init (privk->r);	
         mpz_init (privk->t);	
 	
-	for(i=0; i < N; i++)
+	for(i=0; i < DTLS_MA_N; i++)
 		mpz_init (privk->k[i]);
 
         mpz_init (privk->sk);
@@ -310,7 +310,7 @@ int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk){
 
 
 
-  	for(i=0; i< N; i++){
+  	for(i=0; i< DTLS_MA_N; i++){
         	fscanf(fp, "%s\n", buf);
         	mpz_set_str (privk->k[i], buf, 16);
   	} 
@@ -319,7 +319,7 @@ int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk){
 	return 0; // for success
 }
 
-void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
+void dtls_ma_save_public_key(const char* fname, struct dtls_ma_public_key* pubk){
 	FILE *fp;
 
    	fp = fopen(fname, "w");
@@ -331,7 +331,7 @@ void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
   	fprintf(fp, "bias = %s\n", mpz_get_str(NULL, 16, pubk->bias));	
 
 	int i;
-  	for(i=0; i< M; i++){
+  	for(i=0; i< DTLS_MA_M; i++){
         	fprintf(fp, "%s\n", mpz_get_str(NULL, 16, pubk->Element[i]));
   	} 
 
@@ -341,9 +341,9 @@ void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
    	fclose(fp);
 }
 
- struct PubKey* dtls_ma_load_public_key(const char* fname){
+ struct dtls_ma_public_key* dtls_ma_load_public_key(const char* fname){
 	int i;
-	struct PubKey* pubk = malloc(sizeof(struct PubKey));
+	struct dtls_ma_public_key* pubk = malloc(sizeof(struct dtls_ma_public_key));
 
 	mpz_init (pubk->q);	
         mpz_init (pubk->t);
@@ -351,7 +351,7 @@ void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
 	mpz_init (pubk->w);
 	mpz_init (pubk->wMin);
 	mpz_init (pubk->bias);	
-	for(i=0; i < M; i++)
+	for(i=0; i < DTLS_MA_M; i++)
 		mpz_init (pubk->Element[i]);
 
 	FILE *fp;
@@ -381,7 +381,7 @@ void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
         mpz_set_str (pubk->bias, buf, 16);
 
 
-  	for(i=0; i< M; i++){
+  	for(i=0; i< DTLS_MA_M; i++){
         	fscanf(fp, "%s\n", buf);
         	mpz_set_str (pubk->Element[i], buf, 16);
   	} 
@@ -391,9 +391,9 @@ void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk){
 	return pubk;
 }
 
-void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk){
+void dtls_ma_get_public_key(struct dtls_ma_private_key* privk, struct dtls_ma_public_key* pubk){
 
-	// struct PubKey* pubk = malloc(sizeof(struct PubKey));   
+	// struct dtls_ma_public_key* pubk = malloc(sizeof(struct dtls_ma_public_key));   
     
 	mpz_init (pubk->q);	
         mpz_init (pubk->t);
@@ -402,7 +402,7 @@ void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk){
 	mpz_init (pubk->wMin);
 	mpz_init (pubk->bias);		
 	unsigned int i,j;
-	for(i=0; i < M; i++)
+	for(i=0; i < DTLS_MA_M; i++)
 		mpz_init (pubk->Element[i]);
 
 	mpz_add_ui (pubk->n, privk->n, 0);
@@ -433,21 +433,21 @@ void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk){
 	mpz_mul(skInvQ, skInvQ, privk->p);
 	//unsigned long R_MAX = mpz_get_ui(privk->r);
 
-       for(i=0; i<M; i++){
+       for(i=0; i<DTLS_MA_M; i++){
                 mpz_set_ui (leftSum, 0);
 
-		for(j=0; j<N;j++){
-			mpz_mul_si(a, privk->k[j], common[(i+(j+1)*bias)%COMMON_LEN]);
+		for(j=0; j<DTLS_MA_N;j++){
+			mpz_mul_si(a, privk->k[j], dtls_ma_common[(i+(j+1)*bias)%DTLS_MA_COMMON_LEN]);
 			mpz_add(leftSum, leftSum, a);
 		}
 
 
-		unsigned char* error = dtls_ma_random_hex(Q_BITS/8);	
+		unsigned char* error = dtls_ma_random_hex(DTLS_MA_Q_BITS/8);	
 		mpz_set_str(e, (char *) error, 16);
 		free(error);
 		mpz_mod (e, e, privk->r);
 			
-		if(E_SIGN=='-')
+		if(DTLS_MA_E_SIGN=='-')
 			mpz_mul_si (e, e, -1);
 
                 //printf("\n error %s\n", mpz_get_str(NULL, 16, e));
@@ -468,54 +468,54 @@ void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk){
 }
 
 
-void dtls_ma_print_SIS_sample(char* msg, struct PubKey* pubk, struct Cipher* D){
+void dtls_ma_print_SIS_sample(char* msg, struct dtls_ma_public_key* pubk, struct dtls_ma_cipher* D){
 	//printPubK(msg, pubk);
         //printCipherS(D); 
         int i, j;
         printf("\n\n Copy the expression to https://develop.wolframcloud.com/objects/63785264-af0d-49e5-83e4-36465169a55d\n\nFindInstance[{\n"); 
-   	for(j=0; j < N; j++){
+   	for(j=0; j < DTLS_MA_N; j++){
  
-  		for(i=0; i< M; i++){
-		   if(i==M-1)	
-		   printf("(%d)*l%d==%ld, \n", (common[(i+(j+1)*mpz_get_ui(pubk->bias))%COMMON_LEN]), i, mpz_get_si(D->element[j]));			
+  		for(i=0; i< DTLS_MA_M; i++){
+		   if(i==DTLS_MA_M-1)	
+		   printf("(%d)*l%d==%ld, \n", (dtls_ma_common[(i+(j+1)*mpz_get_ui(pubk->bias))%DTLS_MA_COMMON_LEN]), i, mpz_get_si(D->element[j]));			
                    else      
-		   printf("(%d)*l%d+", (common[(i+(j+1)*mpz_get_ui(pubk->bias))%COMMON_LEN]), i);			
+		   printf("(%d)*l%d+", (dtls_ma_common[(i+(j+1)*mpz_get_ui(pubk->bias))%DTLS_MA_COMMON_LEN]), i);			
         	}  
    	}
 
-   	for(i=0; i< M; i++){
-                if(i==M-1) 
-			printf("l%d<=%d, \n", i,W);			
+   	for(i=0; i< DTLS_MA_M; i++){
+                if(i==DTLS_MA_M-1) 
+			printf("l%d<=%d, \n", i,DTLS_MA_W);			
 		else
 			printf("l%d+", i);			
         } 
 
-	for(i=0; i< M; i++){
-                if(i==M-1) 
-			printf("l%d>=-%d, \n", i,W);			
+	for(i=0; i< DTLS_MA_M; i++){
+                if(i==DTLS_MA_M-1) 
+			printf("l%d>=-%d, \n", i,DTLS_MA_W);			
 		else
 			printf("l%d+", i);			
         } 
 
-   	for(i=0; i< M; i++){
-                if(i==M-1)
-			{printf("l%d<=%d,", i, W);}			
+   	for(i=0; i< DTLS_MA_M; i++){
+                if(i==DTLS_MA_M-1)
+			{printf("l%d<=%d,", i, DTLS_MA_W);}			
 		else
-			{printf("l%d<=%d, ", i, W);}			
+			{printf("l%d<=%d, ", i, DTLS_MA_W);}			
         } 
 
-   	for(i=0; i< M; i++){
-                if(i==M-1)
-			{printf("l%d>=-%d", i, W);}			
+   	for(i=0; i< DTLS_MA_M; i++){
+                if(i==DTLS_MA_M-1)
+			{printf("l%d>=-%d", i, DTLS_MA_W);}			
 		else
-			{printf("l%d>=-%d, ", i, W);}			
+			{printf("l%d>=-%d, ", i, DTLS_MA_W);}			
         } 
 
   	printf("}, \n{"); 
   	  
 
-   	for(i=0; i< M; i++){
-		if(i==M-1)
+   	for(i=0; i< DTLS_MA_M; i++){
+		if(i==DTLS_MA_M-1)
 		printf("l%d", i);
                 else
 		printf("l%d, ", i);			
@@ -525,7 +525,7 @@ void dtls_ma_print_SIS_sample(char* msg, struct PubKey* pubk, struct Cipher* D){
 }
 
 
-void dtls_ma_print_public_key(char* msg, struct PubKey* pubk){
+void dtls_ma_print_public_key(char* msg, struct dtls_ma_public_key* pubk){
 
   printf("\n %s \n", msg);
   printf("n = %lu \n", mpz_get_ui(pubk->n));	  	
@@ -537,12 +537,12 @@ void dtls_ma_print_public_key(char* msg, struct PubKey* pubk){
 
 
   int i, j;
-  for(i=0; i< M; i++){
-        for(j=0; j  < N+1; j++){
-                if(j==N)
+  for(i=0; i< DTLS_MA_M; i++){
+        for(j=0; j  < DTLS_MA_N+1; j++){
+                if(j==DTLS_MA_N)
 			printf("%s \n", mpz_get_str(NULL, 16,pubk->Element[i]));
                 else
-			printf("%7d ", (common[(i+(j+1)*mpz_get_ui(pubk->bias))%COMMON_LEN])); //+i)+j
+			printf("%7d ", (dtls_ma_common[(i+(j+1)*mpz_get_ui(pubk->bias))%DTLS_MA_COMMON_LEN])); //+i)+j
 
 			
 
@@ -553,12 +553,12 @@ void dtls_ma_print_public_key(char* msg, struct PubKey* pubk){
 }
 
 
-void dtls_ma_enc(struct PubKey* pubk, mpz_t v, struct Cipher* D){
+void dtls_ma_enc(struct dtls_ma_public_key* pubk, mpz_t v, struct dtls_ma_cipher* D){
         mpz_mod(v, v, pubk->t);
 	
 	unsigned int i,j;
 	mpz_init(D->tail);
-        for(i=0; i<N; i++){
+        for(i=0; i<DTLS_MA_N; i++){
 		mpz_init(D->element[i]);
 	}	
 
@@ -566,23 +566,23 @@ void dtls_ma_enc(struct PubKey* pubk, mpz_t v, struct Cipher* D){
 
 	unsigned char* rbytes = dtls_ma_random_bytes(2);
         memcpy((unsigned char*)&sel, rbytes, 2);  
-	sel = sel%W;
+	sel = sel%DTLS_MA_W;
 
-	if(sel<W_MIN){
-		sel = W - sel;
+	if(sel<DTLS_MA_W_MIN){
+		sel = DTLS_MA_W - sel;
 	}	
 	free(rbytes);
 
         unsigned char* alpha = malloc(sel); //for addtion
 
-        unsigned char l[M];
+        unsigned char l[DTLS_MA_M];
         mpz_t partialV,  a;
         mpz_init(partialV);
 	mpz_init(a);
 	mpz_set_ui(partialV, 0);
 
 	
-	for(i=0; i<M; i++){
+	for(i=0; i<DTLS_MA_M; i++){
 		l[i]=0x00;
   	}
 
@@ -591,13 +591,13 @@ void dtls_ma_enc(struct PubKey* pubk, mpz_t v, struct Cipher* D){
                 unsigned char rr = rbytes[0];
 		free(rbytes);
 		
-		alpha[i] = rr%M;			
+		alpha[i] = rr%DTLS_MA_M;			
 
 		l[alpha[i]] = l[alpha[i]] + 1;		
 		mpz_add(partialV, partialV, pubk->Element[alpha[i]]);
 	}
 
-        //for(i=0; i<M; i++){
+        //for(i=0; i<DTLS_MA_M; i++){
 	//	if(l1[i]>0)
 	//		printf("l%u=-%u, ", i, l1[i]);
 	//	else
@@ -611,11 +611,11 @@ void dtls_ma_enc(struct PubKey* pubk, mpz_t v, struct Cipher* D){
 		mpz_sub(D->tail, v, partialV);
 	        mpz_mod(D->tail, D->tail, pubk->q);
 
-		for(i=0; i<N; i++){            
+		for(i=0; i<DTLS_MA_N; i++){            
 			mpz_set_ui(D->element[i], 0);  
 
 	            	for(j=0; j<sel; j++){
-				mpz_set_si(a, common[(alpha[j]+(i+1)*mpz_get_ui(pubk->bias))%COMMON_LEN]);
+				mpz_set_si(a, dtls_ma_common[(alpha[j]+(i+1)*mpz_get_ui(pubk->bias))%DTLS_MA_COMMON_LEN]);
 	                        mpz_add(D->element[i], D->element[i], a);
 	            	} 
 	            	
@@ -629,11 +629,11 @@ void dtls_ma_enc(struct PubKey* pubk, mpz_t v, struct Cipher* D){
 	return;
 }
 
-void dtls_ma_print_cipher_string(struct Cipher* D){ 
+void dtls_ma_print_cipher_string(struct dtls_ma_cipher* D){ 
 
   int i;
   printf("cipherS \n"); 
-  for(i=0; i< N; i++){
+  for(i=0; i< DTLS_MA_N; i++){
 	printf("%s, ",  mpz_get_str(NULL, 16, D->element[i]));
          
         if((i+1)%3==0){
@@ -647,9 +647,9 @@ void dtls_ma_print_cipher_string(struct Cipher* D){
 }
 
 
-int dtls_ma_cipher_out_str(struct Cipher* D, char* buf, int buf_len){
+int dtls_ma_cipher_out_str(struct dtls_ma_cipher* D, char* buf, int buf_len){
 	int i, len=0, pos=0;
-	for(i=0; i< N; i++){
+	for(i=0; i< DTLS_MA_N; i++){
 		
 
 		if(len>buf_len){
@@ -691,21 +691,21 @@ int dtls_ma_cipher_out_str(struct Cipher* D, char* buf, int buf_len){
 	return len;
 }
 
-struct Cipher* dtls_ma_cipher_in_str(char* buf, int* last){
-	struct Cipher* D = malloc(sizeof(struct Cipher));   
-        char buf1[N*Q_BITS/8+64];
+struct dtls_ma_cipher* dtls_ma_cipher_in_str(char* buf, int* last){
+	struct dtls_ma_cipher* D = malloc(sizeof(struct dtls_ma_cipher));   
+        char buf1[DTLS_MA_N*DTLS_MA_Q_BITS/8+64];
 	int i, pos=0;
 	mpz_init(D->tail);
-        for(i=0; i<N; i++){
+        for(i=0; i<DTLS_MA_N; i++){
 		mpz_init(D->element[i]);
 	}
 
-	for(i=0; i< N; i++){
+	for(i=0; i< DTLS_MA_N; i++){
 		sscanf(buf+pos, "%[^,],", buf1);
 		pos=pos+strlen(buf1)+1;
-		if(pos>=N*Q_BITS/8+64){
+		if(pos>=DTLS_MA_N*DTLS_MA_Q_BITS/8+64){
 			#ifdef DTLS_MA_DEBUG			
-			printf("The buf1 in dtls_ma_cipher_in_str is too small: expected at least %d, actual %d\n", pos, N*Q_BITS/8+64);
+			printf("The buf1 in dtls_ma_cipher_in_str is too small: expected at least %d, actual %d\n", pos, DTLS_MA_N*DTLS_MA_Q_BITS/8+64);
 			#endif
 			free(D);
 			return NULL;
@@ -729,7 +729,7 @@ struct Cipher* dtls_ma_cipher_in_str(char* buf, int* last){
 }
 
 
-void dtls_ma_dec(struct PrivKey* privk, struct Cipher* D, mpz_t v){
+void dtls_ma_dec(struct dtls_ma_private_key* privk, struct dtls_ma_cipher* D, mpz_t v){
 	//printf("decryption \n"); 
 
 
@@ -741,7 +741,7 @@ void dtls_ma_dec(struct PrivKey* privk, struct Cipher* D, mpz_t v){
         mpz_set_ui(leftsum, 0);
 
         int j; 
-        for(j=0;j < N; j++){
+        for(j=0;j < DTLS_MA_N; j++){
                 mpz_mul(a, privk->k[j], D->element[j]);
 		//mpz_mod(a, a, privk->q);
                 mpz_add(leftsum, leftsum, a);
@@ -757,7 +757,7 @@ void dtls_ma_dec(struct PrivKey* privk, struct Cipher* D, mpz_t v){
 
 	mpz_mul(a, privk->sk, leftsum);
 	mpz_mod(leftsum, a, privk->q);
-	if(E_SIGN=='+')
+	if(DTLS_MA_E_SIGN=='+')
 	{
 		mpz_mul(a, leftsum, privk->skInvP);
 		mpz_mod(b, a, privk->p);
@@ -779,8 +779,8 @@ void dtls_ma_dec(struct PrivKey* privk, struct Cipher* D, mpz_t v){
 }
 
 
-unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len){
-	int group_size = G==0?1:(T_BITS/8-1); //1 or (T_BITS/8-1)	
+unsigned char* dtls_ma_enc_str_G(struct dtls_ma_public_key* pubk, unsigned char* buf, int* len){
+	int group_size = DTLS_MA_G==0?1:(DTLS_MA_T_BITS/8-1); //1 or (DTLS_MA_T_BITS/8-1)	
 	
 	mpz_t* v = malloc(group_size*sizeof(mpz_t));
 	int buf_pos=0;
@@ -792,9 +792,9 @@ unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* l
 	int res_len = 64;
 	unsigned char* res = (unsigned char *) malloc(res_len);
 
-	struct Cipher* c = malloc(group_size*sizeof(struct Cipher)); 
+	struct dtls_ma_cipher* c = malloc(group_size*sizeof(struct dtls_ma_cipher)); 
 
-	unsigned char temp_buf[N*Q_BITS/8+16];
+	unsigned char temp_buf[DTLS_MA_N*DTLS_MA_Q_BITS/8+16];
 
 	while(buf_pos<buf_len){
 		int l;
@@ -835,7 +835,7 @@ unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* l
 		for(i=0; i < group_size; i++){
 			//printCipherS(c+i);
 
- 			int cipher_len = dtls_ma_cipher_out_str(c+i, (char *) temp_buf, N*Q_BITS/8+16);
+ 			int cipher_len = dtls_ma_cipher_out_str(c+i, (char *) temp_buf, DTLS_MA_N*DTLS_MA_Q_BITS/8+16);
 			if(cipher_len==-1){
 				dtls_ma_debug("Error: dtls_ma_cipher_out_str \n");		
 				return NULL;
@@ -861,8 +861,8 @@ unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* l
 	return res;
 }
 
-unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len){
-	int group_size = G==0?1:(T_BITS/8-1); //1 or (T_BITS/8-1)	
+unsigned char* dtls_ma_dec_str_G(struct dtls_ma_private_key* privk,unsigned char* buf, int* buf_len){
+	int group_size = DTLS_MA_G==0?1:(DTLS_MA_T_BITS/8-1); //1 or (DTLS_MA_T_BITS/8-1)	
 	int res_len = 4;
 	unsigned char* res = malloc(res_len);
 
@@ -873,15 +873,15 @@ unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* 
 	int len=-1;
 	int pos=1;
 	int i;
-	unsigned char temp_buf[N*Q_BITS/8];
-	struct Cipher** D= malloc(group_size*sizeof(struct Cipher*));
+	unsigned char temp_buf[DTLS_MA_N*DTLS_MA_Q_BITS/8];
+	struct dtls_ma_cipher** D= malloc(group_size*sizeof(struct dtls_ma_cipher*));
 	
 	// int num_modes= 1<<group_size; unused variable
 
 	int count =0;
 	
 	while(buf_pos < *buf_len){
-		struct Cipher* temp = dtls_ma_cipher_in_str((char *) buf + buf_pos, &pos);
+		struct dtls_ma_cipher* temp = dtls_ma_cipher_in_str((char *) buf + buf_pos, &pos);
 							
 		D[count] = temp;
 		//printCipherS(D[i]);
@@ -913,10 +913,10 @@ unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* 
 		//}
 
 		if(group_size>1){
-			len=dtls_ma_decodeG(temp_buf, N*Q_BITS/8, v, 0);
+			len=dtls_ma_decodeG(temp_buf, DTLS_MA_N*DTLS_MA_Q_BITS/8, v, 0);
 		}
 		else
-			len=dtls_ma_decode(temp_buf, N*Q_BITS/8, *v);
+			len=dtls_ma_decode(temp_buf, DTLS_MA_N*DTLS_MA_Q_BITS/8, *v);
 			
 
 		//printf("decoded buf len = %d \n", len);
@@ -955,7 +955,7 @@ unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* 
 
 int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 
-	unsigned int block_len = T_BITS/8;
+	unsigned int block_len = DTLS_MA_T_BITS/8;
 	int i;
 
 
@@ -1013,7 +1013,7 @@ int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 					unsigned char temp = num_of_ab<<4;
 					c = c | temp;
 					if(block_len-1>=16){
-						dtls_ma_debug("\nPotential Error: too big T_BITS\n");
+						dtls_ma_debug("\nPotential Error: too big DTLS_MA_T_BITS\n");
 					}
 				}
 				else{
@@ -1022,7 +1022,7 @@ int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 					free(byteC);
 				}
 			}
-			unsigned char s = common_sign[c]; ; 
+			unsigned char s = dtls_ma_common_sign[c]; ; 
 			block_sign[g-1] = block_sign[g-1] ^ s^c;
 		
 			tagged_buf[i] = c;
@@ -1111,7 +1111,7 @@ int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 
 int dtls_ma_check(unsigned char* tagged_buf, int tagged_buf_len){
 	int i, j, k, g;
-	unsigned int block_len = T_BITS/8;	 
+	unsigned int block_len = DTLS_MA_T_BITS/8;	 
 
 	unsigned int group_size = block_len-1;
 
@@ -1178,7 +1178,7 @@ int dtls_ma_check(unsigned char* tagged_buf, int tagged_buf_len){
 				}
 				unsigned char c = *(tagged_buf_temp+i);
 		
-				unsigned char s = common_sign[c]; 
+				unsigned char s = dtls_ma_common_sign[c]; 
 				block_sign_check[g-1] = block_sign_check[g-1] ^ s^c;
 		
 			}
@@ -1227,7 +1227,7 @@ int dtls_ma_check(unsigned char* tagged_buf, int tagged_buf_len){
 int dtls_ma_decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug){
 
 	int i, j, k, g;
-	unsigned int block_len = T_BITS/8;	 
+	unsigned int block_len = DTLS_MA_T_BITS/8;	 
 
 	unsigned int group_size = block_len-1;
 
@@ -1360,7 +1360,7 @@ int dtls_ma_decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int d
 				}
 				unsigned char c = *(tagged_buf_temp+i);
 		
-				unsigned char s = common_sign[c]; 
+				unsigned char s = dtls_ma_common_sign[c]; 
 				block_sign_check[g-1] = block_sign_check[g-1] ^ s^c;
 		
 			}
@@ -1443,7 +1443,7 @@ int dtls_ma_decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int d
 			int l;
 			unsigned char temp=0x00;
 			for(l=0; l<return_len-1; l++){
-				temp=temp^buf[l]^(common_sign[buf[l]]);
+				temp=temp^buf[l]^(dtls_ma_common_sign[buf[l]]);
 			}
 			//printf("dtls_ma_decode buf sign: %02x\n", temp);			
 			if(buf[l]!=temp){
@@ -1480,7 +1480,7 @@ int dtls_ma_encode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 	if(buf_len<=0)
 		return -1;
 
-	unsigned int block_len = T_BITS/8;
+	unsigned int block_len = DTLS_MA_T_BITS/8;
 	int i;
 	unsigned char block_sign = 0x00;
 	unsigned char block_sign_backup = 0x00;	
@@ -1501,9 +1501,9 @@ int dtls_ma_encode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 	for(i=1; i < tagged_buf_len; i++){
 		unsigned char c = *(buf+i-1);
 		
-		unsigned char s = common_sign[c];  
+		unsigned char s = dtls_ma_common_sign[c];  
 		block_sign = block_sign ^ s^c;
-		block_sign_backup = block_sign_backup^common_sign[(c+1)%256]^c;
+		block_sign_backup = block_sign_backup^dtls_ma_common_sign[(c+1)%256]^c;
 		
 		tagged_buf[i] = c;
 	}
@@ -1536,10 +1536,10 @@ int dtls_ma_decode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 	mpz_t b;
 	mpz_init(b);
 
-	unsigned char* buf_temp = malloc(T_BITS/8);
+	unsigned char* buf_temp = malloc(DTLS_MA_T_BITS/8);
 
 	
-	unsigned int block_len = T_BITS/8;
+	unsigned int block_len = DTLS_MA_T_BITS/8;
 	int i, j; 
 	for(i=0; i<block_len; i++){
 		mpz_fdiv_r_2exp (b, res, 8);
@@ -1573,9 +1573,9 @@ int dtls_ma_decode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 			for(j=0; j< count; j++){
 				*(buf+j) = buf_temp[count-1-j]^block_sign; 
 				//produce signature
-				unsigned char s = common_sign[*(buf+j)]; ; 
+				unsigned char s = dtls_ma_common_sign[*(buf+j)]; ; 
 				block_sign_checked = block_sign_checked ^ s^(*(buf+j));
-				block_sign_backup = block_sign_backup^common_sign[(*(buf+j)+1)%256]^*(buf+j);
+				block_sign_backup = block_sign_backup^dtls_ma_common_sign[(*(buf+j)+1)%256]^*(buf+j);
 			} 
 
 			if(block_sign_checked==0xAA){

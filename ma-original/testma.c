@@ -55,23 +55,23 @@ PROCESS_THREAD(ma_test, ev, d)
 #else /* CONTIKI */
 
 static char* lpki_enc(char * pubfile, char * command){
-  struct PubKey* pubk; 
+  struct dtls_ma_public_key* pubk; 
   int len = strlen(command);
 
   printf("load pub key \n");
-  pubk = loadPubKey(pubfile);   
+  pubk = dtls_ma_load_public_key(pubfile);   
   
   printf("encode command: %s, length: %d \n", command, len);
-  char* buf= (char*) enc_str_G(pubk, (unsigned char*) command, &len);
+  char* buf= (char*) dtls_ma_enc_str_G(pubk, (unsigned char*) command, &len);
 
   printf("\n-ciphertext length: %d\n", len);
   return buf;
 }
 
 static char * lpki_dec(char *privfile, char *buf, int size){
-  struct PrivKey privk;
-  loadPrivK(privfile, &privk);   
-  char* buf1 = (char*) dec_str_G(&privk, (unsigned char*) buf, &size);
+  struct dtls_ma_private_key privk;
+  dtls_ma_load_private_key(privfile, &privk);   
+  char* buf1 = (char*) dtls_ma_dec_str_G(&privk, (unsigned char*) buf, &size);
 
 
   printf("buf size = %d\n", size);	
@@ -81,18 +81,18 @@ static char * lpki_dec(char *privfile, char *buf, int size){
 }
 
 static void lpki_keygen(){
-  struct PrivKey privk;
-  struct PubKey pubk; 
+  struct dtls_ma_private_key privk;
+  struct dtls_ma_public_key pubk; 
 
-  genKeys(&privk, &pubk); 
+  dtls_ma_generate_keys(&privk, &pubk); 
  
   printf("save private key\n");
-  savePrivK("./privK.txt", &privk);
+  dtls_ma_save_private_key("./privK.txt", &privk);
   // loadPrivK("./privK.txt", &privkLoad); 
 
   // pubk = getPubKey(&privkLoad);      
   printf("save public key\n");
-  savePubKey("./pubK.txt", &pubk); 
+  dtls_ma_save_public_key("./pubK.txt", &pubk); 
 }
 
 

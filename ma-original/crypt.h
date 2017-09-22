@@ -9,27 +9,27 @@
 
 #include "mini-gmp.h"
 
-#define M 74u  
-#define N 13u  
-#define T_BITS 16u 
-#define Q_BITS 32u
-#define G 0u
-#define W 86u  //W must be bigger than B (number of positive BS)
-#define W_MIN 60u
-#define B 16u  //the maximum of common public key element
+#define DTLS_MA_M 74u  
+#define DTLS_MA_N 13u  
+#define DTLS_MA_T_BITS 16u 
+#define DTLS_MA_Q_BITS 32u
+#define DTLS_MA_G 0u
+#define DTLS_MA_W 86u  //W must be bigger than B (number of positive BS)
+#define DTLS_MA_W_MIN 60u
+#define DTLS_MA_B 16u  //the maximum of common public key element
 //#define P_BITS 16u
-#define E_BITS 8u
-#define E_SIGN '+'
-#define SK_BITS 8u
-#define COMMON_LEN 256u
+#define DTLS_MA_E_BITS 8u
+#define DTLS_MA_E_SIGN '+'
+#define DTLS_MA_SK_BITS 8u
+#define DTLS_MA_COMMON_LEN 256u
 
-struct Cipher{
-        mpz_t element[N];        
+struct dtls_ma_cipher{
+        mpz_t element[DTLS_MA_N];        
         mpz_t tail;  
 };
 
 
-struct PrivKey{
+struct dtls_ma_private_key{
 	mpz_t n;
         mpz_t w;
 	mpz_t wMin; 
@@ -38,15 +38,15 @@ struct PrivKey{
         mpz_t q;
 	mpz_t r;
 	mpz_t t;
-	mpz_t k[N];
+	mpz_t k[DTLS_MA_N];
         mpz_t sk;
         mpz_t skInvQ;
         mpz_t skInvP;
 };
 
-struct PubKey{
+struct dtls_ma_public_key{
        	mpz_t q;
-        mpz_t Element[M];   
+        mpz_t Element[DTLS_MA_M];   
 	mpz_t t;	
 	mpz_t bias;
         mpz_t w;
@@ -55,12 +55,12 @@ struct PubKey{
 };
 
 //BN+12
-static const char common[COMMON_LEN] = 
+static const char dtls_ma_common[DTLS_MA_COMMON_LEN] = 
 {
 4, 2, 13, 7, 9, 7, 7, 12, 6, 8, 10, 11, 15, 4, 8, 12, 10, 3, 10, 10, 9, 6, 12, 4, 8, 9, 11, 9, 5, 11, 3, 15, 5, 11, 7, 13, 3, 8, 11, 5, 3, 5, 11, 3, 4, 14, 12, 4, 2, 11, 13, 7, 12, 15, 9, 11, 5, 12, 3, 9, 4, 3, 10, 8, 2, 13, 4, 15, 7, 11, 5, 6, 11, 10, 2, 3, 4, 3, 4, 15, 14, 2, 9, 2, 9, 2, 9, 8, 10, 5, 8, 4, 11, 14, 7, 11, 2, 6, 3, 13, 4, 13, 4, 7, 2, 12, 4, 6, 3, 12, 2, 4, 12, 9, 10, 3, 5, 12, 7, 7, 3, 3, 4, 14, 2, 8, 5, 4, 4, 10, 9, 3, 10, 9, 14, 14, 5, 8, 3, 4, 7, 14, 12, 5, 15, 5, 2, 3, 10, 2, 5, 4, 5, 4, 2, 8, 8, 5, 10, 2, 9, 14, 5, 14, 9, 12, 5, 12, 4, 12, 11, 12, 6, 3, 2, 3, 9, 10, 15, 6, 12, 15, 13, 4, 13, 15, 4, 3, 4, 3, 8, 6, 12, 9, 8, 10, 13, 9, 5, 15, 10, 10, 9, 6, 10, 10, 2, 8, 9, 2, 10, 8, 3, 14, 3, 10, 7, 9, 2, 9, 9, 6, 4, 4, 13, 3, 6, 15, 10, 5, 3, 14, 2, 3, 14, 12, 6, 11, 15, 11, 10, 7, 6, 14, 15, 11, 13, 3, 7, 13, 12, 14, 13, 12, 10, 11,
 };
 
-static const unsigned char common_sign[] = {
+static const unsigned char dtls_ma_common_sign[] = {
  0x83, 0x17, 0xe3, 0x60, 0x5c, 0xc3, 0x8a, 0xda, 0xcb, 0x8c, 0x98, 0x25, 0xdf, 0x77, 0x8d, 0xda,
  0x2a, 0x91, 0x99, 0x92, 0x77, 0x1b, 0x00, 0x70, 0xf7, 0xcf, 0x2a, 0xa9, 0xe3, 0xd7, 0x2d, 0xc7, 
  0x7f, 0x5b, 0x3e, 0x25, 0x42, 0x3a, 0xfe, 0x5a, 0x2b, 0x74, 0xdc, 0x65, 0x3c, 0xa0, 0x85, 0xc1,
@@ -79,38 +79,38 @@ static const unsigned char common_sign[] = {
  0xe5, 0x14, 0x12, 0xde, 0x4b, 0x6b, 0x9d, 0x11, 0x69, 0x67, 0x63, 0x4e, 0x53, 0x67, 0x09, 0xdc,
 };
 
-void dtls_ma_generate_keys(struct PrivKey* privk, struct PubKey* pubk);
+void dtls_ma_generate_keys(struct dtls_ma_private_key* privk, struct dtls_ma_public_key* pubk);
 
-void dtls_ma_generate_private_key(struct PrivKey* privk);
+void dtls_ma_generate_private_key(struct dtls_ma_private_key* privk);
 
-void dtls_ma_print_private_key(struct PrivKey* privk);
+void dtls_ma_print_private_key(struct dtls_ma_private_key* privk);
 
-void dtls_ma_save_private_key(const char* fname, struct PrivKey* privk);
+void dtls_ma_save_private_key(const char* fname, struct dtls_ma_private_key* privk);
 
-int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk);
+int dtls_ma_load_private_key(const char* fname, struct dtls_ma_private_key* privk);
 
-void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk);
+void dtls_ma_get_public_key(struct dtls_ma_private_key* privk, struct dtls_ma_public_key* pubk);
 
-void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk);
-struct PubKey* dtls_ma_load_public_key(const char* fname);
+void dtls_ma_save_public_key(const char* fname, struct dtls_ma_public_key* pubk);
+struct dtls_ma_public_key* dtls_ma_load_public_key(const char* fname);
 
-void dtls_ma_print_public_key(char* msg, struct PubKey* pubk);
-
-
-//struct Cipher* enc_str(struct PubKey* pubk, unsigned char* buf, unsigned long len); 
-unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len);
-void dtls_ma_enc(struct PubKey* pubk, mpz_t v,struct Cipher*); 
-
-int dtls_ma_cipher_out_str(struct Cipher* D, char* buf, int buf_len);
-struct Cipher* dtls_ma_cipher_in_str(char* buf, int* pos);
-
-void dtls_ma_print_cipher_string(struct Cipher* D);
+void dtls_ma_print_public_key(char* msg, struct dtls_ma_public_key* pubk);
 
 
-void dtls_ma_dec(struct PrivKey* privk, struct Cipher*, mpz_t v);
-unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len);
+//struct dtls_ma_cipher* enc_str(struct dtls_ma_public_key* pubk, unsigned char* buf, unsigned long len); 
+unsigned char* dtls_ma_enc_str_G(struct dtls_ma_public_key* pubk, unsigned char* buf, int* len);
+void dtls_ma_enc(struct dtls_ma_public_key* pubk, mpz_t v,struct dtls_ma_cipher*); 
 
-void dtls_ma_print_SIS_sample(char* msg, struct PubKey* pubk, struct Cipher* D);
+int dtls_ma_cipher_out_str(struct dtls_ma_cipher* D, char* buf, int buf_len);
+struct dtls_ma_cipher* dtls_ma_cipher_in_str(char* buf, int* pos);
+
+void dtls_ma_print_cipher_string(struct dtls_ma_cipher* D);
+
+
+void dtls_ma_dec(struct dtls_ma_private_key* privk, struct dtls_ma_cipher*, mpz_t v);
+unsigned char* dtls_ma_dec_str_G(struct dtls_ma_private_key* privk,unsigned char* buf, int* buf_len);
+
+void dtls_ma_print_SIS_sample(char* msg, struct dtls_ma_public_key* pubk, struct dtls_ma_cipher* D);
 
 
 
