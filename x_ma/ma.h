@@ -92,7 +92,7 @@ int dtls_ma_load_private_key(const char* fname, struct dtls_ma_private_key* priv
 
 struct dtls_ma_public_key* dtls_ma_get_public_key(struct dtls_ma_private_key* privk);
 
-void dtls_ma_saved_public_key(const char* fname, struct dtls_ma_public_key* pubk);
+void dtls_ma_save_public_key(const char* fname, struct dtls_ma_public_key* pubk);
 struct dtls_ma_public_key* dtls_ma_load_public_key(const char* fname);
 
 void dtls_ma_print_public_key(char* msg, struct dtls_ma_public_key* pubk);
@@ -120,7 +120,7 @@ int dtls_ma_encode(unsigned char* buf, unsigned long buf_len, mpz_t res);
 int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res);
 int dtls_ma_decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug);
 
-
+int dtls_ma_check(unsigned char* tagged_buf, int tagged_buf_len);
 unsigned char* dtls_ma_random_bytes(int buflen);
 unsigned char* dtls_ma_random_hex(int len);
 
