@@ -62,3 +62,13 @@ dtls_config.h
 *.z1
 *.z1sp
 .project
+ma/build
+ma/*.zip
+ma/*.txt
+ma/*.py
+ma/pki*
+pubK.txt
+privK.txt
+*.stackdump
+x_ma
+x_ma/*
