@@ -13,7 +13,13 @@ static mpz_t v1;
 static mpz_t v2;
 static mpz_t v3;
 
-
+void genKeys(struct PrivKey* privk, struct PubKey* pubk){
+	printf("generate private key\n");
+	genPrivKey(privk);
+	printf("generate public key\n");
+	getPubKey(privk, pubk);
+	printf("All done\n");
+}
 
 void genPrivKey(struct PrivKey* privk){
 	// = (struct PrivKey*) malloc(sizeof(struct PrivKey)); 
@@ -380,9 +386,9 @@ void savePubKey(const char* fname, struct PubKey* pubk){
 	return pubk;
 }
 
-struct PubKey* getPubKey(struct PrivKey* privk){
+void getPubKey(struct PrivKey* privk, struct PubKey* pubk){
 
-	struct PubKey* pubk = malloc(sizeof(struct PubKey));   
+	// struct PubKey* pubk = malloc(sizeof(struct PubKey));   
     
 	mpz_init (pubk->q);	
         mpz_init (pubk->t);
@@ -451,8 +457,8 @@ struct PubKey* getPubKey(struct PrivKey* privk){
         mpz_clear (a);
         mpz_clear (e);
 	mpz_clear (leftSum);
-	return pubk;
-
+	// return pubk;
+	return;
 
 }
 

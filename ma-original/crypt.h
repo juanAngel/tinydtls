@@ -79,6 +79,8 @@ static const unsigned char common_sign[] = {
  0xe5, 0x14, 0x12, 0xde, 0x4b, 0x6b, 0x9d, 0x11, 0x69, 0x67, 0x63, 0x4e, 0x53, 0x67, 0x09, 0xdc,
 };
 
+void genKeys(struct PrivKey* privk, struct PubKey* pubk);
+
 void genPrivKey(struct PrivKey* privk);
 
 void printPrivK(struct PrivKey* privk);
@@ -87,7 +89,7 @@ void savePrivK(const char* fname, struct PrivKey* privk);
 
 int loadPrivK(const char* fname, struct PrivKey* privk);
 
-struct PubKey* getPubKey(struct PrivKey* privk);
+void getPubKey(struct PrivKey* privk, struct PubKey* pubk);
 
 void savePubKey(const char* fname, struct PubKey* pubk);
 struct PubKey* loadPubKey(const char* fname);

@@ -82,15 +82,31 @@ static char * lpki_dec(char *privfile, char *buf, int size){
 
 static void lpki_keygen(){
   struct PrivKey privk, privkLoad;
-  struct PubKey* pubk; 
+  struct PubKey pubk; 
+
+  genKeys(&privk, &pubk); 
+ 
+  printf("save private key\n");
+  savePrivK("./privK.txt", &privk);
+  // loadPrivK("./privK.txt", &privkLoad); 
+
+  // pubk = getPubKey(&privkLoad);      
+  printf("save public key\n");
+  savePubKey("./pubK.txt", &pubk); 
+}
+
+
+static void xlpki_keygen(){
+  struct PrivKey privk, privkLoad;
+  struct PubKey pubk; 
 
   genPrivKey(&privk); 
  
   savePrivK("./privK.txt", &privk);
   loadPrivK("./privK.txt", &privkLoad); 
 
-  pubk = getPubKey(&privkLoad);      
-  savePubKey("./pubK.txt", pubk); 
+  getPubKey(&privkLoad, &pubk);
+  savePubKey("./pubK.txt", &pubk);
 }
 
 int main(int argc, char const *argv[])
