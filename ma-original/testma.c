@@ -62,7 +62,7 @@ static char* lpki_enc(char * pubfile, char * command){
   pubk = loadPubKey(pubfile);   
   
   printf("encode command: %s, length: %d \n", command, len);
-  char* buf= (char*) enc_str_G(pubk, command, &len);
+  char* buf= (char*) enc_str_G(pubk, (unsigned char*) command, &len);
 
   printf("\n-ciphertext length: %d\n", len);
   return buf;
@@ -71,7 +71,7 @@ static char* lpki_enc(char * pubfile, char * command){
 static char * lpki_dec(char *privfile, char *buf, int size){
   struct PrivKey privk;
   loadPrivK(privfile, &privk);   
-  char* buf1 = (char*) dec_str_G(&privk, buf, &size);
+  char* buf1 = (char*) dec_str_G(&privk, (unsigned char*) buf, &size);
 
 
   printf("buf size = %d\n", size);	
@@ -81,7 +81,7 @@ static char * lpki_dec(char *privfile, char *buf, int size){
 }
 
 static void lpki_keygen(){
-  struct PrivKey privk, privkLoad;
+  struct PrivKey privk;
   struct PubKey pubk; 
 
   genKeys(&privk, &pubk); 
@@ -95,19 +95,6 @@ static void lpki_keygen(){
   savePubKey("./pubK.txt", &pubk); 
 }
 
-
-static void xlpki_keygen(){
-  struct PrivKey privk, privkLoad;
-  struct PubKey pubk; 
-
-  genPrivKey(&privk); 
- 
-  savePrivK("./privK.txt", &privk);
-  loadPrivK("./privK.txt", &privkLoad); 
-
-  getPubKey(&privkLoad, &pubk);
-  savePubKey("./pubK.txt", &pubk);
-}
 
 int main(int argc, char const *argv[])
 {
