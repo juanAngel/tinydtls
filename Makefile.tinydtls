@@ -30,6 +30,11 @@ CFLAGS += -DDTLS_PSK
 CFLAGS += -DDTLS_ECC
 tinydtls_src += ecc.c
 
+# This adds support for TLS_MA
+CFLAGS += -DDTLS_MA
+tinydtls_src += ma.c
+tinydtls_src += mini-gmp.c
+
 # This activates debugging support
 # CFLAGS += -DNDEBUG
 tinydtls_src += debug.c

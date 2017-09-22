@@ -63,11 +63,12 @@ AC_ARG_WITH(ecc,
    OPT_OBJS="${OPT_OBJS} ecc/ecc.o"
    DTLS_ECC=1])
 
+# added for multilevel authentication support
 AC_ARG_WITH(ma,
-  [AS_HELP_STRING([--without-ma],[disable support for TLS_MA_ECDSA_WITH_AES_*])],
+  [AS_HELP_STRING([--without-ma],[disable support for TLS_MA_*])],
   [],
   [AC_DEFINE(DTLS_MA, 1, [Define to 1 if building with MA support.])
-   OPT_OBJS="${OPT_OBJS} ma/ma.o"
+   OPT_OBJS="${OPT_OBJS} ma/ma.o ma/mini-gmp.o"
    DTLS_MA=1])
 
 AC_ARG_WITH(psk,

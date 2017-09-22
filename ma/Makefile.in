@@ -39,14 +39,14 @@ all: $(PROGRAMS)
 ma_test.o:	ma.c mini-gmp.c ma.h mini-gmp.h 
 	$(CC) $(CFLAGS) $(CPPFLAGS)  -c -o $@ $<
 
-testma: ma_test.o
+testma: ma_test.o mini-gmp.o 
 
 check:	
 	echo DISTDIR: $(DISTDIR)
 	echo top_builddir: $(top_builddir)
 
 clean:
-	@rm -f $(PROGRAMS) main.o $(LIB) $(OBJECTS)
+	@rm -f $(PROGRAMS) main.o $(LIB) $(MA_OBJECTS)
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean ; \
 	done
@@ -60,9 +60,9 @@ dist:	$(FILES)
 	test -d $(DISTDIR)/ma || mkdir $(DISTDIR)/ma
 	cp -p $(FILES) $(DISTDIR)/ma
 
-install:	$(HEADERS)
+install:	$(MA_HEADERS)
 	test -d $(includedir)/ma || mkdir -p $(includedir)/ma
-	$(install) $(HEADERS) $(includedir)/ma
+	$(install) $(MA_HEADERS) $(includedir)/ma
 
 .gitignore:
 	echo "core\n*~\n*.[oa]\n*.gz\n*.cap\n$(PROGRAM)\n$(DISTDIR)\n.gitignore" >$@
