@@ -7,11 +7,11 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
-
-static mpz_t v0;
-static mpz_t v1;
-static mpz_t v2;
-static mpz_t v3;
+#include <time.h>
+// static mpz_t v0;
+// static mpz_t v1;
+// static mpz_t v2;
+// static mpz_t v3;
 
 static int seed=0;
 static FILE *urandom=NULL;
@@ -29,7 +29,7 @@ void genPrivKey(struct PrivKey* privk){
         //srand(1234624);
 
 
-	int i, j;
+	int i/*, j*/; // unused variable to be removed
 	mpz_init (privk->n);
 	mpz_init (privk->w);
 	mpz_init (privk->wMin);
@@ -72,7 +72,7 @@ void genPrivKey(struct PrivKey* privk){
 
         //sk
 	unsigned char* skStep = randomhex(SK_BITS/8);
-        mpz_set_str(privk->sk, skStep, 16);
+        mpz_set_str(privk->sk, (char *) skStep, 16);
 	free(skStep);
         mpz_mul_ui (privk->sk, privk->sk, 2);
         mpz_add_ui (privk->sk, privk->sk, 1); //privk->sk co-primise with q
@@ -109,7 +109,7 @@ void genPrivKey(struct PrivKey* privk){
 
 	//privk->p = privk->t + pStep*2+1; //since 4294967296 has only the factor 2 
 	unsigned char* pStep = randomhex(SK_BITS/8);	
-        mpz_set_str(b, pStep, 16);
+        mpz_set_str(b, (char *) pStep, 16);
 	free(pStep);
 	mpz_mod(b, b, a);	
 
@@ -141,7 +141,7 @@ void genPrivKey(struct PrivKey* privk){
 	        }
 		else{
 			pStep = randomhex(SK_BITS/8);	
-        		mpz_set_str(b, pStep, 16);
+        		mpz_set_str(b, (char *) pStep, 16);
 			free(pStep);
 			mpz_mod(b , b, a);	
 
@@ -167,7 +167,7 @@ void genPrivKey(struct PrivKey* privk){
 
 	for(i=0; i < N; i++){
 		unsigned char* k = randomhex(Q_BITS/8);	
-		mpz_set_str(privk->k[i], k, 16);
+		mpz_set_str(privk->k[i], (char *) k, 16);
 		free(k);
 	}
 
@@ -314,7 +314,7 @@ int loadPrivK(const char* fname, struct PrivKey* privk){
   	} 
 
    	fclose(fp);
-
+	return 0; // for success
 }
 
 void savePubKey(const char* fname, struct PubKey* pubk){
@@ -421,7 +421,7 @@ void getPubKey(struct PrivKey* privk, struct PubKey* pubk){
 	mpz_add_ui (pubk->q, privk->q, 0);
 	mpz_add_ui (pubk->t, privk->t, 0);
 
-        mpz_t skInvQ, leftSum, a, b, e;
+        mpz_t skInvQ, leftSum, a, /*b, */ e; // unused variable to be removed
         mpz_init (skInvQ);
         mpz_init (leftSum);
         mpz_init (a);
@@ -441,7 +441,7 @@ void getPubKey(struct PrivKey* privk, struct PubKey* pubk){
 
 
 		unsigned char* error = randomhex(Q_BITS/8);	
-		mpz_set_str(e, error, 16);
+		mpz_set_str(e, (char *) error, 16);
 		free(error);
 		mpz_mod (e, e, privk->r);
 			
@@ -470,7 +470,7 @@ void printSISSample(char* msg, struct PubKey* pubk, struct Cipher* D){
 	//printPubK(msg, pubk);
         //printCipherS(D); 
         int i, j;
-        printf("\n\n Copy the expression to https://develop.wolframcloud.com/objects/63785264-af0d-49e5-83e4-36465169a55d\n\nFindInstance[\{\n"); 
+        printf("\n\n Copy the expression to https://develop.wolframcloud.com/objects/63785264-af0d-49e5-83e4-36465169a55d\n\nFindInstance[{\n"); 
    	for(j=0; j < N; j++){
  
   		for(i=0; i< M; i++){
@@ -827,7 +827,7 @@ unsigned char* enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len){
 		for(i=0; i < group_size; i++){
 			//printCipherS(c+i);
 
- 			int cipher_len = cipher_out_str(c+i, temp_buf, N*Q_BITS/8+16);
+ 			int cipher_len = cipher_out_str(c+i, (char *) temp_buf, N*Q_BITS/8+16);
 			if(cipher_len==-1){
 				printf("Error: cipher_out_str \n");		
 				return NULL;
@@ -868,12 +868,12 @@ unsigned char* dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len)
 	unsigned char temp_buf[N*Q_BITS/8];
 	struct Cipher** D= malloc(group_size*sizeof(struct Cipher*));
 	
-	int num_modes= 1<<group_size;
+	// int num_modes= 1<<group_size; unused variable
 
 	int count =0;
 	
 	while(buf_pos < *buf_len){
-		struct Cipher* temp = cipher_in_str(buf+buf_pos, &pos);
+		struct Cipher* temp = cipher_in_str((char *) buf + buf_pos, &pos);
 							
 		D[count] = temp;
 		//printCipherS(D[i]);
@@ -1376,12 +1376,12 @@ int decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug){
 			int num_of_AB = group_size -p;	
 			
 			unsigned char len_of_last_AA=-1;
-			unsigned char len_of_last_AB=-1;
+			// unsigned char len_of_last_AB=-1; // unused variable
 			//unsigned char num_of_AB_check;
 			int return_len;
 			if(num_of_AB>=1){
 				len_of_last_AA = (unsigned char) *(tagged_buf_temp+temp_return_len-1);
-				len_of_last_AB = (unsigned char) *(tagged_buf_temp+temp_return_len-1);
+				// len_of_last_AB = (unsigned char) *(tagged_buf_temp+temp_return_len-1);
 
 
 				len_of_last_AA = len_of_last_AA&0x0F;
@@ -1593,7 +1593,7 @@ int decode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 
 
 unsigned char* randBytes(int buflen){
-	int i=0;
+	// int i=0; // unused variable
 	
 	unsigned char* buf = malloc(buflen+1);	
 	
@@ -1654,7 +1654,7 @@ unsigned char* randomhex(int len){
         int i;
 
 	for(i=0; i < len; i++){
-		sprintf(res+pos, "%02X", (unsigned char)temp[i]);
+		sprintf((char *) res+pos, "%02X", (unsigned char)temp[i]);
 		pos=pos+2;
 	}
 	res[2*len] = 0x00;
