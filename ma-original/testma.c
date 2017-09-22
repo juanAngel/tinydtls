@@ -25,7 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include "crypt.h"
+#include "ma.h"
 // #include "encode.h"
 #include "mini-gmp.h"
 
