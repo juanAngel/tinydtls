@@ -79,52 +79,52 @@ static const unsigned char common_sign[] = {
  0xe5, 0x14, 0x12, 0xde, 0x4b, 0x6b, 0x9d, 0x11, 0x69, 0x67, 0x63, 0x4e, 0x53, 0x67, 0x09, 0xdc,
 };
 
-void genKeys(struct PrivKey* privk, struct PubKey* pubk);
+void dtls_ma_generate_keys(struct PrivKey* privk, struct PubKey* pubk);
 
-void genPrivKey(struct PrivKey* privk);
+void dtls_ma_generate_private_key(struct PrivKey* privk);
 
-void printPrivK(struct PrivKey* privk);
+void dtls_ma_print_private_key(struct PrivKey* privk);
 
-void savePrivK(const char* fname, struct PrivKey* privk);
+void dtls_ma_save_private_key(const char* fname, struct PrivKey* privk);
 
-int loadPrivK(const char* fname, struct PrivKey* privk);
+int dtls_ma_load_private_key(const char* fname, struct PrivKey* privk);
 
-void getPubKey(struct PrivKey* privk, struct PubKey* pubk);
+void dtls_ma_get_public_key(struct PrivKey* privk, struct PubKey* pubk);
 
-void savePubKey(const char* fname, struct PubKey* pubk);
-struct PubKey* loadPubKey(const char* fname);
+void dtls_ma_save_public_key(const char* fname, struct PubKey* pubk);
+struct PubKey* dtls_ma_load_public_key(const char* fname);
 
-void printPubK(char* msg, struct PubKey* pubk);
+void dtls_ma_print_public_key(char* msg, struct PubKey* pubk);
 
 
 //struct Cipher* enc_str(struct PubKey* pubk, unsigned char* buf, unsigned long len); 
-unsigned char* enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len);
-void enc(struct PubKey* pubk, mpz_t v,struct Cipher*); 
+unsigned char* dtls_ma_enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len);
+void dtls_ma_enc(struct PubKey* pubk, mpz_t v,struct Cipher*); 
 
-int cipher_out_str(struct Cipher* D, char* buf, int buf_len);
-struct Cipher* cipher_in_str(char* buf, int* pos);
+int dtls_ma_cipher_out_str(struct Cipher* D, char* buf, int buf_len);
+struct Cipher* dtls_ma_cipher_in_str(char* buf, int* pos);
 
-void printCipherS(struct Cipher* D);
+void dtls_ma_print_cipher_string(struct Cipher* D);
 
 
-void dec(struct PrivKey* privk, struct Cipher*, mpz_t v);
-unsigned char* dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len);
+void dtls_ma_dec(struct PrivKey* privk, struct Cipher*, mpz_t v);
+unsigned char* dtls_ma_dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len);
 
-void printSISSample(char* msg, struct PubKey* pubk, struct Cipher* D);
+void dtls_ma_print_SIS_sample(char* msg, struct PubKey* pubk, struct Cipher* D);
 
 
 
 /* from encode.h */
-int decode(unsigned char* buf, unsigned long buf_len, mpz_t res);
-int encode(unsigned char* buf, unsigned long buf_len, mpz_t res);
+int dtls_ma_decode(unsigned char* buf, unsigned long buf_len, mpz_t res);
+int dtls_ma_encode(unsigned char* buf, unsigned long buf_len, mpz_t res);
 
-int encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res);
-int decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug);
-
-
-unsigned char* randBytes(int buflen);
-unsigned char* randomhex(int len);
+int dtls_ma_encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res);
+int dtls_ma_decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug);
 
 
-int check(unsigned char* tagged_buf, int tagged_buf_len);
+unsigned char* dtls_ma_random_bytes(int buflen);
+unsigned char* dtls_ma_random_hex(int len);
+
+
+int dtls_ma_check(unsigned char* tagged_buf, int tagged_buf_len);
 void dtls_ma_debug(char * msg);
