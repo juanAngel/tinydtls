@@ -127,3 +127,4 @@ unsigned char* randomhex(int len);
 
 
 int check(unsigned char* tagged_buf, int tagged_buf_len);
+void dtls_ma_debug(char * msg);

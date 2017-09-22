@@ -1,35 +1,31 @@
 
 #include "crypt.h"
-// #include "encode.h"
-#include <stdio.h> /* For printf() */
+#include <stdio.h> 
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-// static mpz_t v0;
-// static mpz_t v1;
-// static mpz_t v2;
-// static mpz_t v3;
 
 static int seed=0;
 static FILE *urandom=NULL;
+#define DTLS_MA_DEBUG 1
 
 void genKeys(struct PrivKey* privk, struct PubKey* pubk){
-	printf("generate private key\n");
+	dtls_ma_debug("generate private key");
 	genPrivKey(privk);
-	printf("generate public key\n");
+	dtls_ma_debug("generate public key");
 	getPubKey(privk, pubk);
-	printf("All done\n");
+	dtls_ma_debug("All done");
 }
 
 void genPrivKey(struct PrivKey* privk){
-	// = (struct PrivKey*) malloc(sizeof(struct PrivKey)); 
-        //srand(1234624);
+	int i;
+	unsigned char* skStep;
+	unsigned char* pStep;
+	unsigned char* k;
 
-
-	int i/*, j*/; // unused variable to be removed
 	mpz_init (privk->n);
 	mpz_init (privk->w);
 	mpz_init (privk->wMin);
@@ -71,7 +67,7 @@ void genPrivKey(struct PrivKey* privk){
 	mpz_mul_2exp(privk->r, privk->r, E_BITS); 	
 
         //sk
-	unsigned char* skStep = randomhex(SK_BITS/8);
+	skStep = randomhex(SK_BITS/8);
         mpz_set_str(privk->sk, (char *) skStep, 16);
 	free(skStep);
         mpz_mul_ui (privk->sk, privk->sk, 2);
@@ -84,7 +80,7 @@ void genPrivKey(struct PrivKey* privk){
         mpz_mul (b, a, privk->sk);
 	
 	if(mpz_cmp(b, privk->q)>=0){
-		printf("\nError: the parameters T_BITS or SK_BITS too big with respect to Q_BITS\n");
+		dtls_ma_debug("\nError: the parameters T_BITS or SK_BITS too big with respect to Q_BITS");
 		return;
 	}
 
@@ -99,16 +95,18 @@ void genPrivKey(struct PrivKey* privk){
 	mpz_add_ui(b, privk->t, 0xFF);
 
 	if(mpz_cmp(a,b)<0){
-		printf("\nError: the parameters E_BITS and SK_BITS too big with respect to Q_BITS\n");
+		dtls_ma_debug("\nError: the parameters E_BITS and SK_BITS too big with respect to Q_BITS");
 		return;
 	}	
 
 	mpz_sub (a, a, privk->t);
-	printf("max pstep: %s \n", mpz_get_str(NULL, 16, a));	
+	#ifdef DTLS_MA_DEBUG
+	printf("max pstep: %s \n", mpz_get_str(NULL, 16, a));
+	#endif
 
 
 	//privk->p = privk->t + pStep*2+1; //since 4294967296 has only the factor 2 
-	unsigned char* pStep = randomhex(SK_BITS/8);	
+	pStep = randomhex(SK_BITS/8);	
         mpz_set_str(b, (char *) pStep, 16);
 	free(pStep);
 	mpz_mod(b, b, a);	
@@ -133,10 +131,14 @@ void genPrivKey(struct PrivKey* privk){
                 mpz_mul (b, c, privk->sk);
 		mpz_mod (b, b, privk->p);
 
-	        if(mpz_get_ui(b)==1){//(inv*privk->sk)%privk->p==1
-			printf("sk: %s coprime with: %s\n", mpz_get_str(NULL, 16, privk->sk), mpz_get_str(NULL, 16, privk->p));
-                        mpz_mul_ui (privk->skInvP, c, 1);
-                        printf("skInvP: %s \n", mpz_get_str(NULL, 16,privk->skInvP));
+		if(mpz_get_ui(b)==1){//(inv*privk->sk)%privk->p==1
+			#ifdef DTLS_MA_DEBUG			
+			printf("sk: %s coprime with: %s \n", mpz_get_str(NULL, 16, privk->sk), mpz_get_str(NULL, 16, privk->p));
+			#endif
+			mpz_mul_ui (privk->skInvP, c, 1);
+			#ifdef DTLS_MA_DEBUG			
+			printf("skInvP: %s \n", mpz_get_str(NULL, 16,privk->skInvP));
+			#endif
                         break; 
 	        }
 		else{
@@ -166,7 +168,7 @@ void genPrivKey(struct PrivKey* privk){
 
 
 	for(i=0; i < N; i++){
-		unsigned char* k = randomhex(Q_BITS/8);	
+		k = randomhex(Q_BITS/8);	
 		mpz_set_str(privk->k[i], (char *) k, 16);
 		free(k);
 	}
@@ -348,7 +350,7 @@ void savePubKey(const char* fname, struct PubKey* pubk){
 	mpz_init (pubk->n);
 	mpz_init (pubk->w);
 	mpz_init (pubk->wMin);
-	mpz_init (pubk->bias);		
+	mpz_init (pubk->bias);	
 	for(i=0; i < M; i++)
 		mpz_init (pubk->Element[i]);
 
@@ -651,7 +653,9 @@ int cipher_out_str(struct Cipher* D, char* buf, int buf_len){
 		
 
 		if(len>buf_len){
-			printf("buf not long enough: expected at least %d, actual %d\n", len, buf_len);	
+			#ifdef DTLS_MA_DEBUG			
+			printf("buf not long enough: expected at least %d, actual %d", len, buf_len);
+			#endif
 			return -1;
 		}
 
@@ -667,7 +671,9 @@ int cipher_out_str(struct Cipher* D, char* buf, int buf_len){
 	len = len + strlen(temp)+1;
 
 	if(len>buf_len){
-		printf("The buf is too small: expected %d, actual %d\n", len, buf_len);	
+		#ifdef DTLS_MA_DEBUG
+		printf("The buf is too small: expected %d, actual %d", len, buf_len);
+		#endif		
 		return -1;
 	}
 
@@ -698,7 +704,9 @@ struct Cipher* cipher_in_str(char* buf, int* last){
 		sscanf(buf+pos, "%[^,],", buf1);
 		pos=pos+strlen(buf1)+1;
 		if(pos>=N*Q_BITS/8+64){
+			#ifdef DTLS_MA_DEBUG			
 			printf("The buf1 in cipher_in_str is too small: expected at least %d, actual %d\n", pos, N*Q_BITS/8+64);
+			#endif
 			free(D);
 			return NULL;
 		}
@@ -829,7 +837,7 @@ unsigned char* enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len){
 
  			int cipher_len = cipher_out_str(c+i, (char *) temp_buf, N*Q_BITS/8+16);
 			if(cipher_len==-1){
-				printf("Error: cipher_out_str \n");		
+				dtls_ma_debug("Error: cipher_out_str \n");		
 				return NULL;
 			}
 
@@ -837,7 +845,7 @@ unsigned char* enc_str_G(struct PubKey* pubk, unsigned char* buf, int* len){
 				res_len = (res_pos + cipher_len)+256;
 				res = (unsigned char *) realloc(res, res_len);
 				if(res==NULL){	
-					printf("realloc fails\n");
+					dtls_ma_debug("realloc fails\n");
 					return NULL;
 				}
 			}
@@ -913,7 +921,9 @@ unsigned char* dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len)
 
 		//printf("decoded buf len = %d \n", len);
 		if(len<0){
+			#ifdef DTLS_MA_DEBUG			
 			printf("failed decryption len = %d \n", len);
+			#endif
 			*buf_len = -1;
 			return NULL;
 		}
@@ -1003,7 +1013,7 @@ int encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 					unsigned char temp = num_of_ab<<4;
 					c = c | temp;
 					if(block_len-1>=16){
-						printf("\nPotential Error: too big T_BITS\n");
+						dtls_ma_debug("\nPotential Error: too big T_BITS\n");
 					}
 				}
 				else{
@@ -1062,7 +1072,7 @@ int encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 			if(num_of_ab==num_of_ab_check)
 				break;
 			else{
-				printf("\n!!!!!Conflict addressed\n");
+				dtls_ma_debug("\n!!!!!Conflict addressed\n");
 			}	
 
 		}
@@ -1409,8 +1419,9 @@ int decodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res, int debug){
 				free(tagged_buf);
 				free(tagged_buf_temp);	
 				free(buf_temp);
-
+				#ifdef DTLS_MA_DEBUG				
 				printf("Error: buf is not long enough (expected length %d bytes)\n", return_len);
+				#endif
 
 				return -2;
 			}
@@ -1602,7 +1613,7 @@ unsigned char* randBytes(int buflen){
 	if( access("/dev/urandom", F_OK ) != -1 ) {
 	    	if(urandom==NULL){
 			urandom = fopen("/dev/urandom", "r");
-		        printf("open /dev/urandom \n");
+		        dtls_ma_debug("open /dev/urandom \n");
 	        }
 	} 
 
@@ -1647,7 +1658,7 @@ unsigned char* randomhex(int len){
 
 	unsigned char* res = malloc(2*len+1);
         if(res==NULL)
-		printf("malloc failure!\n"); 
+	dtls_ma_debug("malloc failure!\n"); 
 
 	
 	int pos=0;
@@ -1664,3 +1675,8 @@ unsigned char* randomhex(int len){
 }
 
 
+void dtls_ma_debug(char * msg){
+#ifdef DTLS_MA_DEBUG
+	printf("%s\n", msg);
+#endif
+}
