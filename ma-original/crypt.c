@@ -13,6 +13,9 @@ static mpz_t v1;
 static mpz_t v2;
 static mpz_t v3;
 
+static int seed=0;
+static FILE *urandom=NULL;
+
 void genKeys(struct PrivKey* privk, struct PubKey* pubk){
 	printf("generate private key\n");
 	genPrivKey(privk);
@@ -937,8 +940,8 @@ unsigned char* dec_str_G(struct PrivKey* privk,unsigned char* buf, int* buf_len)
 
 /* from encode.c */
 
-static FILE *fp=NULL;
-static int seed=0;
+// static FILE *fp=NULL;
+// static int seed=0;
 
 int encodeG(unsigned char* buf, unsigned long buf_len, mpz_t* res){
 
@@ -1588,16 +1591,17 @@ int decode(unsigned char* buf, unsigned long buf_len, mpz_t res){
 }
 
 
+
 unsigned char* randBytes(int buflen){
 	int i=0;
-
+	
 	unsigned char* buf = malloc(buflen+1);	
 	
 	buf[buflen]=0X00;
 	
 	if( access("/dev/urandom", F_OK ) != -1 ) {
-	    	if(fp==NULL){
-	   		fp = fopen("/dev/urandom", "r");
+	    	if(urandom==NULL){
+			urandom = fopen("/dev/urandom", "r");
 		        printf("open /dev/urandom \n");
 	        }
 	} 
@@ -1606,7 +1610,7 @@ unsigned char* randBytes(int buflen){
 	size_t rdLen = 0;
 
 
-        if(fp==NULL){
+        if(urandom==NULL){
 		if(seed==0){
 			seed=1;
                         srand(time(NULL));
@@ -1624,7 +1628,7 @@ unsigned char* randBytes(int buflen){
 
 	while (rdLen < buflen)
 	{
-    		unsigned char c = getc(fp);
+    		unsigned char c = getc(urandom);
     		if ( c == EOF)
     		{
 		        return NULL; 
@@ -1632,7 +1636,7 @@ unsigned char* randBytes(int buflen){
     		buf[rdLen] = c;
 		rdLen++;
 	}
-	close((int)fp);	
+	close((int)urandom);	
 	
 	return buf;
 }
