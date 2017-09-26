@@ -21,10 +21,10 @@
  *
 */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include "ma.h"
 // #include "encode.h"
 #include "mini-gmp.h"
@@ -38,93 +38,89 @@
 #ifdef CONTIKI
 PROCESS(ma_test, "MA test");
 AUTOSTART_PROCESSES(&ma_test);
-PROCESS_THREAD(ma_test, ev, d)
-{
-	PROCESS_BEGIN();
+PROCESS_THREAD(ma_test, ev, d) {
+    PROCESS_BEGIN();
 
-	srand(1234);
-	// addTest();
-	// doubleTest();
-	// multTest();
-	// eccdhTest();
-	// ecdsaTest();
-	printf("%s\n", "All Tests successful.");
+    srand(1234);
+    // addTest();
+    // doubleTest();
+    // multTest();
+    // eccdhTest();
+    // ecdsaTest();
+    printf("%s\n", "All Tests successful.");
 
-	PROCESS_END();
+    PROCESS_END();
 }
 #else /* CONTIKI */
 
-static char* lpki_enc(char * pubfile, char * command){
-  struct dtls_ma_public_key* pubk; 
-  int len = strlen(command);
+static char* lpki_enc(char* pubfile, char* command) {
+    struct dtls_ma_public_key* pubk;
+    int len = strlen(command);
 
-  printf("load pub key \n");
-  pubk = dtls_ma_load_public_key(pubfile);   
-  
-  printf("encode command: %s, length: %d \n", command, len);
-  char* buf= (char*) dtls_ma_enc_str_G(pubk, (unsigned char*) command, &len);
+    printf("load pub key \n");
+    pubk = dtls_ma_load_public_key(pubfile);
 
-  printf("\n-ciphertext length: %d\n", len);
-  return buf;
+    printf("encode command: %s, length: %d \n", command, len);
+    char* buf = (char*)dtls_ma_enc_str_G(pubk, (unsigned char*)command, &len);
+
+    printf("\n-ciphertext length: %d\n", len);
+    return buf;
 }
 
-static char * lpki_dec(char *privfile, char *buf, int size){
-  struct dtls_ma_private_key privk;
-  dtls_ma_load_private_key(privfile, &privk);   
-  char* buf1 = (char*) dtls_ma_dec_str_G(&privk, (unsigned char*) buf, &size);
+static char* lpki_dec(char* privfile, char* buf, int size) {
+    struct dtls_ma_private_key privk;
+    dtls_ma_load_private_key(privfile, &privk);
+    char* buf1 = (char*)dtls_ma_dec_str_G(&privk, (unsigned char*)buf, &size);
 
-
-  printf("buf size = %d\n", size);	
-  buf1[size] = '\0';
-	printf("decoded value: %s\n", buf1 );
-  return buf1;
+    printf("buf size = %d\n", size);
+    buf1[size] = '\0';
+    printf("decoded value: %s\n", buf1);
+    return buf1;
 }
 
-static void lpki_keygen(){
-  struct dtls_ma_private_key privk;
-  struct dtls_ma_public_key pubk; 
+static void lpki_keygen() {
+    struct dtls_ma_private_key privk;
+    struct dtls_ma_public_key pubk;
 
-  dtls_ma_generate_keys(&privk, &pubk); 
- 
-  printf("save private key\n");
-  dtls_ma_save_private_key("./privK.txt", &privk);
-  // loadPrivK("./privK.txt", &privkLoad); 
+    dtls_ma_generate_keys(&privk, &pubk);
 
-  // pubk = getPubKey(&privkLoad);      
-  printf("save public key\n");
-  dtls_ma_save_public_key("./pubK.txt", &pubk); 
+    printf("save private key\n");
+    dtls_ma_save_private_key("./privK.txt", &privk);
+    // loadPrivK("./privK.txt", &privkLoad);
+
+    // pubk = getPubKey(&privkLoad);
+    printf("save public key\n");
+    dtls_ma_save_public_key("./pubK.txt", &pubk);
 }
 
-
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const* argv[]) {
     // struct dtls_ma_private_key priv_key;
     // struct dtls_ma_public_key pub_key;
-    char *command;
+    char* command;
     char* encoded_value;
     char* decoded_value;
     int len_dec;
-    
+
     // srand(time(NULL));
 
     printf("generate keys\n");
     lpki_keygen();
     // dtls_ma_generate_key(&priv_key, &pub_key);
     printf("keys generated\n");
-    command = (char* ) "abcdef";
-    encoded_value = (char* ) lpki_enc("./pubK.txt", command);
+    command = (char*)"abcdef";
+    encoded_value = (char*)lpki_enc("./pubK.txt", command);
 
-    printf("encoded value: %s\n",encoded_value);
+    printf("encoded value: %s\n", encoded_value);
     len_dec = strlen(encoded_value);
-    decoded_value = (char* ) lpki_dec("./privK.txt", encoded_value, len_dec);
-    printf("decoded value: %s\n",decoded_value);
-    
-	// addTest();
-	// doubleTest();
-	// multTest();
-	// eccdhTest();
-	// ecdsaTest();
-	printf("%s\n", "All Tests successful.");
-	return 0;
+    decoded_value = (char*)lpki_dec("./privK.txt", encoded_value, len_dec);
+    printf("decoded value: %s\n", decoded_value);
+
+    // addTest();
+    // doubleTest();
+    // multTest();
+    // eccdhTest();
+    // ecdsaTest();
+    printf("%s\n", "All Tests successful.");
+    return 0;
 }
 #endif
