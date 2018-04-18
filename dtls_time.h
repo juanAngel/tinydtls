@@ -34,7 +34,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#include "tinydtls.h"
+// #include "tinydtls.h"
 
 /**
  * @defgroup clock Clock Handling
@@ -44,13 +44,13 @@
  */
 
 #ifdef WITH_CONTIKI
-#include "clock.h"
+# include "clock.h"
 #else /* WITH_CONTIKI */
-#include <time.h>
+# include <time.h>
 
-#ifndef CLOCK_SECOND
-# define CLOCK_SECOND 1000
-#endif
+# ifndef CLOCK_SECOND
+#  define CLOCK_SECOND 1000
+# endif // ifndef CLOCK_SECOND
 
 typedef uint32_t clock_time_t;
 #endif /* WITH_CONTIKI */
@@ -58,7 +58,7 @@ typedef uint32_t clock_time_t;
 typedef clock_time_t dtls_tick_t;
 
 #ifndef DTLS_TICKS_PER_SECOND
-#define DTLS_TICKS_PER_SECOND CLOCK_SECOND
+# define DTLS_TICKS_PER_SECOND CLOCK_SECOND
 #endif /* DTLS_TICKS_PER_SECOND */
 
 void dtls_clock_init(void);

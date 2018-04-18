@@ -31,11 +31,11 @@
 #ifndef _DTLS_LIST_H_
 #define _DTLS_LIST_H_
 
-#include "tinydtls.h"
+// #include "tinydtls.h"
 
 #ifndef WITH_CONTIKI
-#include "uthash.h"
-#include "utlist.h"
+# include "uthash.h"
+# include "utlist.h"
 
 /* We define list structures and utility functions to be compatible
  * with Contiki list structures. The Contiki list API is part of the
@@ -78,70 +78,71 @@
 
 typedef void **list_t;
 struct list {
-  struct list *next;
+    struct list *next;
 };
 
-#define LIST_CONCAT(s1, s2) s1##s2
+# define LIST_CONCAT(s1, s2) s1 ## s2
 
-#define LIST_STRUCT(name)			\
-  void *LIST_CONCAT(name, _list);		\
-  list_t name
+# define LIST_STRUCT(name)          \
+    void *LIST_CONCAT(name, _list); \
+    list_t name
 
-#define LIST_STRUCT_INIT(struct_ptr, name)  {				\
-    (struct_ptr)->name = &((struct_ptr)->LIST_CONCAT(name,_list));	\
-    (struct_ptr)->LIST_CONCAT(name,_list) = NULL;			\
-  }
+# define LIST_STRUCT_INIT(struct_ptr, name) {           \
+        (struct_ptr)->name =                            \
+            & ((struct_ptr)->LIST_CONCAT(name, _list)); \
+        (struct_ptr)->LIST_CONCAT(name, _list) = NULL;  \
+}
 
 static inline void *
 list_head(list_t list) {
-  return *list;
+    return *list;
 }
 
-static inline void 
+static inline void
 list_remove(list_t list, void *item) {
-  LL_DELETE(*(struct list **)list, (struct list *)item);
+    LL_DELETE(*(struct list **)list, (struct list *)item);
 }
 
-static inline void 
+static inline void
 list_add(list_t list, void *item) {
-  list_remove(list, item);
-  LL_APPEND(*(struct list **)list, (struct list *)item);
+    list_remove(list, item);
+    LL_APPEND(*(struct list **)list, (struct list *)item);
 }
 
-static inline void 
+static inline void
 list_push(list_t list, void *item) {
-  LL_PREPEND(*(struct list **)list, (struct list *)item);
+    LL_PREPEND(*(struct list **)list, (struct list *)item);
 }
 
 static inline void *
 list_pop(list_t list) {
-  struct list *l;
-  l = *list;
-  if(l)
-    list_remove(list, l);
-  
-  return l;
+    struct list *l;
+
+    l = *list;
+
+    if (l) list_remove(list, l);
+
+    return l;
 }
 
 static inline void
 list_insert(list_t list, void *previtem, void *newitem) {
-  if(previtem == NULL) {
-    list_push(list, newitem);
-  } else {
-    ((struct list *)newitem)->next = ((struct list *)previtem)->next;
-    ((struct list *)previtem)->next = newitem;
-  } 
+    if (previtem == NULL) {
+        list_push(list, newitem);
+    } else {
+        ((struct list *)newitem)->next  = ((struct list *)previtem)->next;
+        ((struct list *)previtem)->next = newitem;
+    }
 }
 
 static inline void *
 list_item_next(void *item)
 {
-  return item == NULL? NULL: ((struct list *)item)->next;
+    return item == NULL ? NULL : ((struct list *)item)->next;
 }
 
 #else /* WITH_CONTIKI */
-#include "list.h"
+# include "list.h"
 #endif /* WITH_CONTIKI */
 
 #endif /* _DTLS_LIST_H_ */
-

@@ -23,7 +23,7 @@
  * SOFTWARE.
  */
 
-#include "dtls_config.h"
+//#include "dtls_config.h"
 #include "session.h"
 
 #ifdef HAVE_ASSERT_H

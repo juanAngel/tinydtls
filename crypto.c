@@ -26,8 +26,8 @@
 
 #include <stdio.h>
 
-#include "tinydtls.h"
-#include "dtls_config.h"
+//#include "tinydtls.h"
+//#include "dtls_config.h"
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>

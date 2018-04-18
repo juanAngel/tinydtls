@@ -28,7 +28,7 @@
 
 #include <stdlib.h>
 
-#include "dtls_config.h"
+// #include "dtls_config.h"
 #include "global.h"
 #include "session.h"
 
@@ -36,75 +36,87 @@
 # ifndef DEBUG
 #  define DEBUG DEBUG_PRINT
 # endif /* DEBUG */
-#include "net/ip/uip-debug.h"
+# include "net/ip/uip-debug.h"
 
-#ifdef CONTIKI_TARGET_MBXXX
+# ifdef CONTIKI_TARGET_MBXXX
 extern char __Stack_Init, _estack;
 
 static inline void check_stack() {
-  const char *p = &__Stack_Init;
-  while (p < &_estack && *p == 0x38) {
-    p++;
-  }
+    const char *p = &__Stack_Init;
 
-  PRINTF("Stack: %d bytes used (%d free)\n", &_estack - p, p - &__Stack_Init);
+    while (p < &_estack && *p == 0x38) {
+        p++;
+    }
+
+    PRINTF("Stack: %d bytes used (%d free)\n", &_estack - p, p - &__Stack_Init);
 }
-#else /* CONTIKI_TARGET_MBXXX */
-static inline void check_stack() {
-}
-#endif /* CONTIKI_TARGET_MBXXX */
+
+# else /* CONTIKI_TARGET_MBXXX */
+static inline void check_stack() {}
+
+# endif /* CONTIKI_TARGET_MBXXX */
 #else /* WITH_CONTKI */
-#define PRINTF(...)
+# define PRINTF(...)
 
-static inline void check_stack() {
-}
-#endif
+static inline void check_stack() {}
+
+#endif // ifdef WITH_CONTIKI
 
 struct __session_t;
 
 /** Pre-defined log levels akin to what is used in \b syslog. */
-typedef enum { DTLS_LOG_EMERG=0, DTLS_LOG_ALERT, DTLS_LOG_CRIT, DTLS_LOG_WARN, 
-       DTLS_LOG_NOTICE, DTLS_LOG_INFO, DTLS_LOG_DEBUG
-} log_t;
+typedef enum { DTLS_LOG_EMERG = 0, DTLS_LOG_ALERT, DTLS_LOG_CRIT, DTLS_LOG_WARN,
+               DTLS_LOG_NOTICE, DTLS_LOG_INFO, DTLS_LOG_DEBUG } log_t;
 
 /** Returns a zero-terminated string with the name of this library. */
-const char *dtls_package_name();
+const char* dtls_package_name();
 
 /** Returns a zero-terminated string with the library version. */
-const char *dtls_package_version();
+const char* dtls_package_version();
 
 #ifndef NDEBUG
+
 /** Returns the current log level. */
 log_t dtls_get_log_level();
 
 /** Sets the log level to the specified value. */
-void dtls_set_log_level(log_t level);
+void  dtls_set_log_level(log_t level);
 
-/** 
+/**
  * Writes the given text to \c stdout. The text is output only when \p
  * level is below or equal to the log level that set by
  * set_log_level(). */
-#ifdef HAVE_VPRINTF
-void dsrv_log(log_t level, char *format, ...);
-#else
-#define dsrv_log(level, format, ...) PRINTF(format, ##__VA_ARGS__)
-#endif
+# ifdef HAVE_VPRINTF
+void dsrv_log(log_t level,
+              char *format,
+              ...);
+# else // ifdef HAVE_VPRINTF
+#  define dsrv_log(level, format, ...) PRINTF(format, ## __VA_ARGS__)
+# endif // ifdef HAVE_VPRINTF
 
 /** dumps packets in usual hexdump format */
-void hexdump(const unsigned char *packet, int length);
+void hexdump(const unsigned char *packet,
+             int                  length);
 
 /** dump as narrow string of hex digits */
-void dump(unsigned char *buf, size_t len);
+void dump(unsigned char *buf,
+          size_t         len);
 
-void dtls_dsrv_hexdump_log(log_t level, const char *name, const unsigned char *buf, size_t length, int extend);
+void dtls_dsrv_hexdump_log(log_t                level,
+                           const char          *name,
+                           const unsigned char *buf,
+                           size_t               length,
+                           int                  extend);
 
-void dtls_dsrv_log_addr(log_t level, const char *name, const session_t *addr);
+void dtls_dsrv_log_addr(log_t            level,
+                        const char      *name,
+                        const session_t *addr);
 
 #else /* NDEBUG */
 
 static inline log_t dtls_get_log_level()
 {
-  return DTLS_LOG_EMERG;
+    return DTLS_LOG_EMERG;
 }
 
 static inline void dtls_set_log_level(log_t level)
@@ -120,7 +132,11 @@ static inline void dump(unsigned char *buf, size_t len)
 {}
 
 static inline void
-dtls_dsrv_hexdump_log(log_t level, const char *name, const unsigned char *buf, size_t length, int extend)
+dtls_dsrv_hexdump_log(log_t                level,
+                      const char          *name,
+                      const unsigned char *buf,
+                      size_t               length,
+                      int                  extend)
 {}
 
 static inline void
@@ -137,7 +153,16 @@ dtls_dsrv_log_addr(log_t level, const char *name, const struct __session_t *addr
 #define dtls_notice(...) dsrv_log(DTLS_LOG_NOTICE, __VA_ARGS__)
 #define dtls_info(...) dsrv_log(DTLS_LOG_INFO, __VA_ARGS__)
 #define dtls_debug(...) dsrv_log(DTLS_LOG_DEBUG, __VA_ARGS__)
-#define dtls_debug_hexdump(name, buf, length) dtls_dsrv_hexdump_log(DTLS_LOG_DEBUG, name, buf, length, 1)
-#define dtls_debug_dump(name, buf, length) dtls_dsrv_hexdump_log(DTLS_LOG_DEBUG, name, buf, length, 0)
+#define dtls_debug_hexdump(name, buf, length) dtls_dsrv_hexdump_log( \
+        DTLS_LOG_DEBUG,                                              \
+        name,                                                        \
+        buf,                                                         \
+        length,                                                      \
+        1)
+#define dtls_debug_dump(name, buf, length) dtls_dsrv_hexdump_log(DTLS_LOG_DEBUG, \
+                                                                 name,           \
+                                                                 buf,            \
+                                                                 length,         \
+                                                                 0)
 
 #endif /* _DTLS_DEBUG_H_ */
