@@ -1,4 +1,4 @@
-#include "tinydtls.h" 
+//#include "tinydtls.h"
 
 /* This is needed for apple */
 #define __APPLE_USE_RFC_3542
@@ -16,7 +16,7 @@
 #include <netdb.h>
 #include <signal.h>
 
-#include "global.h" 
+#include "global.h"
 #include "debug.h" 
 #include "dtls.h" 
 
