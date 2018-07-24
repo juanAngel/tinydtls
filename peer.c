@@ -23,6 +23,11 @@
  * SOFTWARE.
  */
 
+
+#ifdef TRACE_DTLS_PEER
+#define ENABLE_TRACE
+#endif
+
 #include "global.h"
 #include "peer.h"
 #include "debug.h"
@@ -74,6 +79,7 @@ dtls_new_peer(const session_t *session) {
 
   peer = dtls_malloc_peer();
   if (peer) {
+    TRACE();
     memset(peer, 0, sizeof(dtls_peer_t));
     memcpy(&peer->session, session, sizeof(session_t));
     peer->security_params[0] = dtls_security_new();
@@ -82,6 +88,13 @@ dtls_new_peer(const session_t *session) {
       dtls_free_peer(peer);
       return NULL;
     }
+    peer->security_params[1] = dtls_security_new();
+
+    if (!peer->security_params[1]) {
+      dtls_free_peer(peer);
+      return NULL;
+    }
+    TRACE();
 
     dtls_dsrv_log_addr(DTLS_LOG_DEBUG, "dtls_new_peer", session);
   }

@@ -31,6 +31,7 @@
 // #include "dtls_config.h"
 #include "global.h"
 #include "session.h"
+#include <help/debug.h>
 
 #ifdef WITH_CONTIKI
 # ifndef DEBUG
@@ -44,6 +45,7 @@ extern char __Stack_Init, _estack;
 static inline void check_stack() {
     const char *p = &__Stack_Init;
 
+
     while (p < &_estack && *p == 0x38) {
         p++;
     }
@@ -56,7 +58,7 @@ static inline void check_stack() {}
 
 # endif /* CONTIKI_TARGET_MBXXX */
 #else /* WITH_CONTKI */
-# define PRINTF(...)
+# define PRINTF(...) printf("" __VA_ARGS__)
 
 static inline void check_stack() {}
 
@@ -77,19 +79,20 @@ const char* dtls_package_version();
 #ifndef NDEBUG
 
 /** Returns the current log level. */
-log_t dtls_get_log_level();
+log_t       dtls_get_log_level();
 
 /** Sets the log level to the specified value. */
-void  dtls_set_log_level(log_t level);
+void        dtls_set_log_level(log_t level);
 
 /**
  * Writes the given text to \c stdout. The text is output only when \p
  * level is below or equal to the log level that set by
  * set_log_level(). */
 # ifdef HAVE_VPRINTF
-void dsrv_log(log_t level,
-              char *format,
-              ...);
+void        dsrv_log(log_t level,
+                     char *format,
+                     ...);
+
 # else // ifdef HAVE_VPRINTF
 #  define dsrv_log(level, format, ...) PRINTF(format, ## __VA_ARGS__)
 # endif // ifdef HAVE_VPRINTF
@@ -119,24 +122,24 @@ static inline log_t dtls_get_log_level()
     return DTLS_LOG_EMERG;
 }
 
-static inline void dtls_set_log_level(log_t level)
+static inline void  dtls_set_log_level(log_t level)
 {}
 
-static inline void dsrv_log(log_t level, char *format, ...)
+static inline void  dsrv_log(log_t level, char *format, ...)
 {}
 
-static inline void hexdump(const unsigned char *packet, int length)
+static inline void  hexdump(const unsigned char *packet, int length)
 {}
 
-static inline void dump(unsigned char *buf, size_t len)
+static inline void  dump(unsigned char *buf, size_t len)
 {}
 
 static inline void
-dtls_dsrv_hexdump_log(log_t                level,
-                      const char          *name,
-                      const unsigned char *buf,
-                      size_t               length,
-                      int                  extend)
+                    dtls_dsrv_hexdump_log(log_t level,
+                      const char               *name,
+                      const unsigned char      *buf,
+                      size_t                    length,
+                      int                       extend)
 {}
 
 static inline void

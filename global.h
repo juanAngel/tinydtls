@@ -75,7 +75,7 @@ typedef unsigned char uint48[6];
 #endif // ifndef DTLS_DEFAULT_MAX_RETRANSMIT
 
 /** Known cipher suites.*/
-typedef enum {
+typedef enum  __attribute__((packed)) {
     TLS_NULL_WITH_NULL_NULL            = 0x0000, /**< NULL cipher  */
     TLS_PSK_WITH_AES_128_CCM_8         = 0xC0A8, /**< see RFC 6655 */
     TLS_ECDHE_ECDSA_WITH_AES_128_CCM_8 = 0xC0AE, /**< see RFC 7251 */
@@ -85,7 +85,7 @@ typedef enum {
 } dtls_cipher_t;
 
 /** Known compression suites.*/
-typedef enum {
+typedef enum  __attribute__((packed)) {
     TLS_COMPRESSION_NULL = 0x0000                  /* NULL compression */
 } dtls_compression_t;
 
@@ -135,6 +135,7 @@ static inline int
 equals(unsigned char *a, unsigned char *b, size_t len) {
     int result = 1;
 
+
     while (len--) {
         result &= (*a++ == *b++);
     }
@@ -147,6 +148,7 @@ equals(unsigned char *a, unsigned char *b, size_t len) {
 static inline int
 dtls_fls(unsigned int i) {
     int n;
+
 
     for (n = 0; i; n++) i >>= 1;
     return n;

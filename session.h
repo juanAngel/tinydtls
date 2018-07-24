@@ -31,13 +31,27 @@
 // #include "tinydtls.h"
 #include "global.h"
 
-#ifdef WITH_CONTIKI
+#if defined(WITH_CONTIKI)
 # include "ip/uip.h"
 typedef struct {
     unsigned char  size;
     uip_ipaddr_t   addr;
     unsigned short port;
     int            ifindex;
+} session_t;
+
+#elif defined(WITH_PIC32)
+
+# include <tcpip/tcpip.h>
+typedef struct {
+    unsigned char size;
+    union {
+        struct sockaddr         sa;
+        struct sockaddr_storage st;
+        struct sockaddr_in      sin;
+        struct sockaddr_in6     sin6;
+    }   addr;
+    int ifindex;
 } session_t;
 
 #else /* WITH_CONTIKI */

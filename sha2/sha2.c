@@ -32,6 +32,8 @@
  * $Id: sha2.c,v 1.1 2001/11/08 00:01:51 adg Exp adg $
  */
 
+#define ENABLE_TRACE
+
 //#include "tinydtls.h"
 //#include "dtls_config.h"
 #include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
@@ -44,6 +46,7 @@
 #endif
 #endif
 #include "sha2.h"
+#include <debug.h>
 
 /*
  * ASSERT NOTE:
@@ -134,6 +137,14 @@
 typedef uint8_t  sha2_byte;	/* Exactly 1 byte */
 typedef uint32_t sha2_word32;	/* Exactly 4 bytes */
 typedef uint64_t sha2_word64;	/* Exactly 8 bytes */
+
+typedef struct sha2_unaligned_word32{
+    uint32_t w;
+}__attribute__((packed)) sha2_unaligned_word32;
+
+typedef struct sha2_unaligned_word64{
+    uint64_t w;
+}__attribute__((packed)) sha2_unaligned_word64;
 
 #else /* SHA2_USE_INTTYPES_H */
 
@@ -246,7 +257,7 @@ typedef u_int64_t sha2_word64;	/* Exactly 8 bytes */
  * only.
  */
 void SHA512_Last(SHA512_CTX*);
-void SHA256_Transform(SHA256_CTX*, const sha2_word32*);
+void SHA256_Transform(SHA256_CTX*, const sha2_unaligned_word32 *);
 void SHA512_Transform(SHA512_CTX*, const sha2_word64*);
 
 #ifdef WITH_SHA256
@@ -471,12 +482,22 @@ void SHA256_Transform(SHA256_CTX* context, const sha2_word32* data) {
 
 #else /* SHA2_UNROLL_TRANSFORM */
 
-void SHA256_Transform(SHA256_CTX* context, const sha2_word32* data) {
-	sha2_word32	a, b, c, d, e, f, g, h, s0, s1;
-	sha2_word32	T1, T2, *W256;
-	int		j;
+void SHA256_Transform(SHA256_CTX* context, const sha2_unaligned_word32* data) {
+    sha2_word32	a, b, c, d, e, f, g, h, s0, s1;
+    sha2_word32	T1, T2;
 
-	W256 = (sha2_word32*)context->buffer;
+    sha2_unaligned_word32 *W256;
+	int		j;
+    if(!(context && data)){
+        ERROR("bad param");
+        return;
+    }
+
+    W256 = (sha2_unaligned_word32*)context->buffer;
+    TRACE("context %x data %x W256 %x &T1 %x",context,data,W256,&T1);
+
+    //TRACE_DUMP("data",data,SHA256_BLOCK_LENGTH);
+    //TRACE_DUMP("W256",W256,SHA256_BLOCK_LENGTH);
 
 	/* Initialize registers with the prev. intermediate value */
 	a = context->state[0];
@@ -492,9 +513,9 @@ void SHA256_Transform(SHA256_CTX* context, const sha2_word32* data) {
 	do {
 #if BYTE_ORDER == LITTLE_ENDIAN
 		/* Copy data while converting to host byte order */
-		REVERSE32(*data++,W256[j]);
+        REVERSE32((data++)->w,W256[j].w);
 		/* Apply the SHA-256 compression function to update a..h */
-		T1 = h + Sigma1_256(e) + Ch(e, f, g) + K256[j] + W256[j];
+        T1 = h + Sigma1_256(e) + Ch(e, f, g) + K256[j] + W256[j].w;
 #else /* BYTE_ORDER == LITTLE_ENDIAN */
 		/* Apply the SHA-256 compression function to update a..h with copy */
 		T1 = h + Sigma1_256(e) + Ch(e, f, g) + K256[j] + (W256[j] = *data++);
@@ -514,14 +535,14 @@ void SHA256_Transform(SHA256_CTX* context, const sha2_word32* data) {
 
 	do {
 		/* Part of the message block expansion: */
-		s0 = W256[(j+1)&0x0f];
+        s0 = W256[(j+1)&0x0f].w;
 		s0 = sigma0_256(s0);
-		s1 = W256[(j+14)&0x0f];	
+        s1 = W256[(j+14)&0x0f].w;
 		s1 = sigma1_256(s1);
 
 		/* Apply the SHA-256 compression function to update a..h */
 		T1 = h + Sigma1_256(e) + Ch(e, f, g) + K256[j] + 
-		     (W256[j&0x0f] += s1 + W256[(j+9)&0x0f] + s0);
+             (W256[j&0x0f].w += s1 + W256[(j+9)&0x0f].w + s0);
 		T2 = Sigma0_256(a) + Maj(a, b, c);
 		h = g;
 		g = f;
@@ -558,6 +579,7 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 		/* Calling with no data is valid - we do nothing */
 		return;
 	}
+    TRACE("data %x len %x",data,len);
 
 	/* Sanity check: */
 	assert(context != (SHA256_CTX*)0 && data != (sha2_byte*)0);
@@ -573,7 +595,8 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 			context->bitcount += freespace << 3;
 			len -= freespace;
 			data += freespace;
-			SHA256_Transform(context, (sha2_word32*)context->buffer);
+            TRACE();
+            SHA256_Transform(context, (sha2_unaligned_word32*)context->buffer);
 		} else {
 			/* The buffer is not yet full */
 			MEMCPY_BCOPY(&context->buffer[usedspace], data, len);
@@ -585,7 +608,8 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 	}
 	while (len >= SHA256_BLOCK_LENGTH) {
 		/* Process as many complete blocks as we can */
-		SHA256_Transform(context, (sha2_word32*)data);
+        TRACE();
+        SHA256_Transform(context, (sha2_unaligned_word32*)data);
 		context->bitcount += SHA256_BLOCK_LENGTH << 3;
 		len -= SHA256_BLOCK_LENGTH;
 		data += SHA256_BLOCK_LENGTH;
@@ -600,7 +624,7 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 }
 
 void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
-	sha2_word32	*d = (sha2_word32*)digest;
+    sha2_unaligned_word32	*d = (sha2_unaligned_word32*)digest;
 	unsigned int	usedspace;
 
 	/* Sanity check: */
@@ -625,7 +649,8 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 					MEMSET_BZERO(&context->buffer[usedspace], SHA256_BLOCK_LENGTH - usedspace);
 				}
 				/* Do second-to-last transform: */
-				SHA256_Transform(context, (sha2_word32*)context->buffer);
+                TRACE();
+                SHA256_Transform(context, (sha2_unaligned_word32*)context->buffer);
 
 				/* And set-up for the last transform: */
 				MEMSET_BZERO(context->buffer, SHA256_SHORT_BLOCK_LENGTH);
@@ -638,10 +663,11 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 			*context->buffer = 0x80;
 		}
 		/* Set the bit count: */
-		*(sha2_word64*)&context->buffer[SHA256_SHORT_BLOCK_LENGTH] = context->bitcount;
+        ((sha2_unaligned_word64*)&context->buffer[SHA256_SHORT_BLOCK_LENGTH])->w = context->bitcount;
 
 		/* Final transform: */
-		SHA256_Transform(context, (sha2_word32*)context->buffer);
+        TRACE();
+        SHA256_Transform(context, (sha2_unaligned_word32*)context->buffer);
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 		{
@@ -649,7 +675,7 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 			int	j;
 			for (j = 0; j < 8; j++) {
 				REVERSE32(context->state[j],context->state[j]);
-				*d++ = context->state[j];
+                (d++)->w = context->state[j];
 			}
 		}
 #else
@@ -687,6 +713,7 @@ char *SHA256_End(SHA256_CTX* context, char buffer[]) {
 
 char* SHA256_Data(const sha2_byte* data, size_t len, char digest[SHA256_DIGEST_STRING_LENGTH]) {
 	SHA256_CTX	context;
+    TRACE();
 
 	SHA256_Init(&context);
 	SHA256_Update(&context, data, len);
