@@ -32,7 +32,9 @@
  * $Id: sha2.c,v 1.1 2001/11/08 00:01:51 adg Exp adg $
  */
 
+#ifdef TRACE_DTLS_SHA2
 #define ENABLE_TRACE
+#endif
 
 //#include "tinydtls.h"
 //#include "dtls_config.h"

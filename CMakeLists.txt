@@ -14,6 +14,7 @@ option(WITH_SHA384 "Activa el soporte de sha284" OFF)
 option(WITH_SHA512 "Activa el soporte de sha512" OFF)
 option(TRACE_DTLS "Activa los trace para dtls" OFF)
 option(TRACE_DTLS_PEER "Activa los trace para dtls peer" OFF)
+option(TRACE_DTLS_SHA2 "Activa los trace para dtls sha2" OFF)
 
 file(GLOB src
     "*.h"
@@ -71,6 +72,9 @@ if(TRACE_DTLS)
 endif()
 if(TRACE_DTLS_PEER)
     target_compile_definitions(${PROJECT_NAME} PUBLIC TRACE_DTLS_PEER=1)
+endif()
+if(TRACE_DTLS_SHA2)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC TRACE_DTLS_SHA2=1)
 endif()
 
 if(PLATFORM STREQUAL "linux")
